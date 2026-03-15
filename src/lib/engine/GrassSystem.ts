@@ -34,6 +34,8 @@ interface PlacedClump {
 	phase: number;
 	speed: number; // random animation speed per clump
 	lodPriority: number;
+	growDelay: number;
+	growProgress: number;
 }
 
 function hexToRgb(hex: number): [number, number, number] {
@@ -117,6 +119,8 @@ export class GrassSystem {
 	/** textures[variation][frame] */
 	private textures: Texture[][] = [];
 	private generated = false;
+	private growInActive = false;
+	private gardenRadius = 0;
 
 	constructor() {
 		this.container = new Container();
@@ -195,17 +199,27 @@ export class GrassSystem {
 				const lod = lodCounter % 4 === 0 ? 0 : lodCounter % 2 === 0 ? 1 : 2;
 				lodCounter++;
 
+				// Grow delay based on distance from center
+				const dist = Math.sqrt(x * x + y * y);
+				const growDelay = (dist / Math.max(1, gardenRadius)) * 3 + Math.random() * 0.3;
+
+				sprite.scale.set(0);
+
 				this.clumps.push({
 					sprite,
 					x, y,
 					variation,
 					phase: Math.random() * 100,
-					speed: 0.04 + Math.random() * 0.08, // each clump animates at its own pace
-					lodPriority: lod
+					speed: 0.04 + Math.random() * 0.08,
+					lodPriority: lod,
+					growDelay,
+					growProgress: 0
 				});
 			}
 		}
 
+		this.gardenRadius = gardenRadius;
+		this.growInActive = true;
 		this.generated = true;
 	}
 
@@ -215,8 +229,26 @@ export class GrassSystem {
 		const time = performance.now() / 1000;
 		const maxLod = zoom < 0.4 ? 0 : zoom < 0.8 ? 1 : 2;
 		const margin = (CLUMP_W * SCALE) / 2 + 10;
+		const dtSec = dt / 60;
+		let allGrown = true;
 
 		for (const clump of this.clumps) {
+			// Grow-in animation
+			if (this.growInActive && clump.growProgress < 1) {
+				clump.growDelay -= dtSec;
+				if (clump.growDelay > 0) {
+					clump.sprite.scale.set(0);
+					allGrown = false;
+					continue;
+				}
+				clump.growProgress = Math.min(1, clump.growProgress + 0.06);
+				const t = clump.growProgress;
+				const ease = 1 - Math.pow(1 - t, 3);
+				clump.sprite.scale.set(SCALE * ease);
+				allGrown = false;
+				continue;
+			}
+
 			// LOD cull
 			if (clump.lodPriority > maxLod) {
 				clump.sprite.visible = false;
@@ -237,6 +269,10 @@ export class GrassSystem {
 			// Evolving: cycle frames slowly, each clump at its own random pace
 			const frameIdx = Math.floor((time * clump.speed + clump.phase) % FRAMES);
 			clump.sprite.texture = this.textures[clump.variation][frameIdx];
+		}
+
+		if (this.growInActive && allGrown) {
+			this.growInActive = false;
 		}
 	}
 

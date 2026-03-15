@@ -38,5 +38,8 @@ const colNames = cols.map((c) => c.name);
 if (!colNames.includes('images')) {
 	db.exec("ALTER TABLE entries ADD COLUMN images TEXT");
 }
+if (!colNames.includes('song')) {
+	db.exec("ALTER TABLE entries ADD COLUMN song TEXT");
+}
 
 export default db;

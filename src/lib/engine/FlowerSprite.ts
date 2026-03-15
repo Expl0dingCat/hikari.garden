@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, ImageSource, Graphics } from 'pixi.js';
+import { Container, Sprite, Texture, BufferImageSource, Graphics, type Renderer } from 'pixi.js';
 import type { JournalEntry, FlowerDNA } from '$lib/types.js';
 import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 import { renderFlower, renderFlowerFrame } from '$lib/generation/PixelArtRenderer.js';
@@ -6,6 +6,8 @@ import { renderFlower, renderFlowerFrame } from '$lib/generation/PixelArtRendere
 const PIXEL_SCALE = 4;
 const ANIM_FRAMES = 4;
 const SPARKLE_COUNT = 8;
+let textureIdCounter = 0;
+
 
 interface Sparkle {
 	angle: number;
@@ -27,6 +29,9 @@ export class FlowerSprite {
 	private hoverScale = 1;
 	private targetHoverScale = 1;
 	private isHovered = false;
+	private growProgress = 1; // 0 = hidden, 1 = fully grown
+	private growDelay = 0;
+	private growStarted = false;
 	private sparkles: Sparkle[] = [];
 	private sparkleAlpha = 0;
 
@@ -35,6 +40,7 @@ export class FlowerSprite {
 	worldY = 0;
 	hitWidth = 0;
 	hitHeight = 0;
+	flowerHeight = 0;
 
 	onClick: ((entry: JournalEntry) => void) | null = null;
 
@@ -43,12 +49,13 @@ export class FlowerSprite {
 		this.dna = generateFlowerDNA(entry.mood, entry.flowerSeed);
 		this.container = new Container();
 
-		// Random animation timing per flower
-		this.animPhase = (entry.flowerSeed % 1000) / 1000 * 100;
-		this.animSpeed = 0.06 + ((entry.flowerSeed % 500) / 500) * 0.08;
+		// Random animation timing per flower (ensure positive values for negative seeds)
+		this.animPhase = (((entry.flowerSeed % 1000) + 1000) % 1000) / 1000 * 100;
+		this.animSpeed = 0.06 + (((entry.flowerSeed % 500) + 500) % 500) / 500 * 0.08;
 
 		// Render base flower + animation frames
 		const base = renderFlower(this.dna);
+
 		for (let f = 0; f < ANIM_FRAMES; f++) {
 			const frame = f === 0 ? base : renderFlowerFrame(base, f, entry.flowerSeed);
 			this.textures.push(this.pixelsToTexture(frame.pixels, frame.width, frame.height));
@@ -60,6 +67,21 @@ export class FlowerSprite {
 
 		this.hitWidth = base.width * PIXEL_SCALE * 0.5;
 		this.hitHeight = base.height * PIXEL_SCALE * 0.6;
+
+		// Find actual top of visible pixels for accurate label placement
+		let topPixelY = 0;
+		const px = base.pixels;
+		const w = base.width;
+		const h = base.height;
+		for (let y = 0; y < h; y++) {
+			let hasPixel = false;
+			for (let x = 0; x < w; x++) {
+				if (px[(y * w + x) * 4 + 3] > 0) { hasPixel = true; break; }
+			}
+			if (hasPixel) { topPixelY = y; break; }
+		}
+		// Height from bottom (anchor) to top visible pixel
+		this.flowerHeight = (h - topPixelY) * PIXEL_SCALE;
 
 		// Sparkle particles for hover indication
 		this.sparkleGfx = new Graphics();
@@ -78,19 +100,20 @@ export class FlowerSprite {
 	}
 
 	private pixelsToTexture(pixels: Uint8ClampedArray, w: number, h: number): Texture {
-		const offscreen = document.createElement('canvas');
-		offscreen.width = w;
-		offscreen.height = h;
-		const ctx = offscreen.getContext('2d')!;
-		const pixelData = new Uint8ClampedArray(pixels.length);
-		pixelData.set(pixels);
-		const imageData = new ImageData(
-			pixelData as unknown as Uint8ClampedArray<ArrayBuffer>,
-			w,
-			h
-		);
-		ctx.putImageData(imageData, 0, 0);
-		const source = new ImageSource({ resource: offscreen, scaleMode: 'nearest' });
+		// Upload raw RGBA pixel data directly to WebGL via BufferImageSource
+		// This bypasses HTMLCanvasElement entirely, avoiding canvas GC issues
+		const buffer = new Uint8Array(pixels.length);
+		buffer.set(pixels);
+		const source = new BufferImageSource({
+			resource: buffer,
+			width: w,
+			height: h,
+			format: 'rgba8unorm',
+			scaleMode: 'nearest',
+			resolution: 1,
+			label: `flower-tex-${textureIdCounter++}`,
+			autoGenerateMipmaps: false
+		});
 		return new Texture({ source });
 	}
 
@@ -113,10 +136,40 @@ export class FlowerSprite {
 		this.targetHoverScale = hovered ? 1.15 : 1;
 	}
 
+	/** Set up grow-in animation: starts hidden, grows after delay (seconds) */
+	setGrowIn(delay: number) {
+		this.growProgress = 0;
+		this.growDelay = delay;
+		this.growStarted = false;
+		this.container.scale.set(0);
+	}
+
+	get isGrown(): boolean {
+		return this.growProgress >= 1;
+	}
+
 	update(_dt: number) {
 		this.hoverScale += (this.targetHoverScale - this.hoverScale) * 0.15;
 
 		const time = performance.now() / 1000;
+
+		// Grow-in animation
+		if (this.growProgress < 1) {
+			if (!this.growStarted) {
+				this.growDelay -= _dt / 60; // dt is in frames at 60fps
+				if (this.growDelay <= 0) this.growStarted = true;
+				else {
+					this.container.scale.set(0);
+					return;
+				}
+			}
+			this.growProgress = Math.min(1, this.growProgress + 0.04);
+			// Elastic ease-out
+			const t = this.growProgress;
+			const ease = t < 1 ? 1 - Math.pow(1 - t, 3) * Math.cos(t * Math.PI * 0.5) : 1;
+			this.container.scale.set(ease);
+			return;
+		}
 
 		// Breathing
 		const breathe = 1 + Math.sin(time * 0.5 + this.entry.flowerSeed * 0.7) * 0.018;
@@ -126,8 +179,9 @@ export class FlowerSprite {
 		const swayAmount = 0.02 * (1 - this.dna.stemCurve * 0.5);
 		this.container.rotation = Math.sin(time * 0.8 + this.entry.flowerSeed) * swayAmount;
 
-		// Pixel animation frames
-		const frameIdx = Math.floor((time * this.animSpeed + this.animPhase) % ANIM_FRAMES);
+		// Pixel animation frames (safe modulo to avoid negative indices)
+		const rawFrame = (time * this.animSpeed + this.animPhase) % ANIM_FRAMES;
+		const frameIdx = ((Math.floor(rawFrame) % ANIM_FRAMES) + ANIM_FRAMES) % ANIM_FRAMES;
 		this.sprite.texture = this.textures[frameIdx];
 
 		// Sparkle hover effect — fade in/out
@@ -153,6 +207,13 @@ export class FlowerSprite {
 				this.sparkleGfx.rect(sx - 1, sy - size, 2, size * 2);
 				this.sparkleGfx.fill({ color: 0xffffff, alpha });
 			}
+		}
+	}
+
+	forceTextureUpload(_renderer: Renderer) {
+		// Force each texture source to mark itself as needing upload
+		for (const tex of this.textures) {
+			tex.source.update();
 		}
 	}
 

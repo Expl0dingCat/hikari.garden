@@ -8,6 +8,7 @@ export class Camera {
 
 	private isDragging = false;
 	private didDrag = false;
+	userInteracted = false;
 	private lastPointerX = 0;
 	private lastPointerY = 0;
 	private smoothing = 0.12;
@@ -62,6 +63,7 @@ export class Camera {
 		if (this.didDrag) {
 			this.targetX += dx / this.zoom;
 			this.targetY += dy / this.zoom;
+			this.userInteracted = true;
 		}
 
 		this.lastPointerX = e.clientX;
@@ -77,6 +79,7 @@ export class Camera {
 		e.preventDefault();
 		const factor = e.deltaY > 0 ? 0.9 : 1.1;
 		this.targetZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.targetZoom * factor));
+		this.userInteracted = true;
 	};
 
 	focusOn(x: number, y: number, zoom?: number) {

@@ -99,6 +99,7 @@ export function getUIThemeStyle(): string {
 			'ui-bar-bg': 'rgba(180, 120, 60, 0.1)',
 			'ui-cancel': 'rgba(120, 80, 40, 0.5)',
 			'ui-cancel-hover': 'rgba(120, 80, 40, 0.15)',
+			'ui-icon-filter': 'invert(0.3) sepia(0.5) hue-rotate(340deg)',
 		},
 		day: {
 			'ui-card': 'rgba(255, 255, 255, 0.93)',
@@ -120,6 +121,7 @@ export function getUIThemeStyle(): string {
 			'ui-bar-bg': 'rgba(0, 0, 0, 0.04)',
 			'ui-cancel': 'rgba(50, 80, 50, 0.45)',
 			'ui-cancel-hover': 'rgba(0, 0, 0, 0.06)',
+			'ui-icon-filter': 'invert(0.4)',
 		},
 		dusk: {
 			'ui-card': 'rgba(50, 38, 65, 0.93)',
@@ -141,6 +143,7 @@ export function getUIThemeStyle(): string {
 			'ui-bar-bg': 'rgba(160, 120, 200, 0.1)',
 			'ui-cancel': 'rgba(200, 170, 220, 0.5)',
 			'ui-cancel-hover': 'rgba(160, 100, 200, 0.15)',
+			'ui-icon-filter': 'invert(0.8) sepia(0.2) hue-rotate(220deg)',
 		},
 		night: {
 			'ui-card': 'rgba(16, 20, 36, 0.94)',
@@ -162,6 +165,7 @@ export function getUIThemeStyle(): string {
 			'ui-bar-bg': 'rgba(60, 120, 140, 0.1)',
 			'ui-cancel': 'rgba(130, 150, 180, 0.5)',
 			'ui-cancel-hover': 'rgba(60, 140, 130, 0.15)',
+			'ui-icon-filter': 'invert(0.75) sepia(0.15) hue-rotate(170deg)',
 		},
 	};
 

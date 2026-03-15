@@ -18,6 +18,7 @@ interface EntryRow {
 	tags: string | null;
 	weather: string | null;
 	images: string | null;
+	song: string | null;
 }
 
 function rowToEntry(row: EntryRow): JournalEntry {
@@ -39,7 +40,8 @@ function rowToEntry(row: EntryRow): JournalEntry {
 		flowerName: row.flower_name,
 		tags: row.tags ? JSON.parse(row.tags) : undefined,
 		weather: row.weather ? JSON.parse(row.weather) : undefined,
-		images: row.images ? JSON.parse(row.images) : undefined
+		images: row.images ? JSON.parse(row.images) : undefined,
+		song: row.song ? JSON.parse(row.song) : undefined
 	};
 }
 
@@ -50,10 +52,10 @@ const stmts = {
 	insert: db.prepare(`
 		INSERT INTO entries (id, date, created_at, updated_at, title, text,
 			mood_joy, mood_energy, mood_tenderness, mood_clarity, mood_hope,
-			flower_seed, flower_name, tags, weather, images)
+			flower_seed, flower_name, tags, weather, images, song)
 		VALUES (@id, @date, @created_at, @updated_at, @title, @text,
 			@mood_joy, @mood_energy, @mood_tenderness, @mood_clarity, @mood_hope,
-			@flower_seed, @flower_name, @tags, @weather, @images)
+			@flower_seed, @flower_name, @tags, @weather, @images, @song)
 	`),
 	update: db.prepare(`
 		UPDATE entries SET
@@ -61,7 +63,8 @@ const stmts = {
 			mood_joy = @mood_joy, mood_energy = @mood_energy,
 			mood_tenderness = @mood_tenderness, mood_clarity = @mood_clarity,
 			mood_hope = @mood_hope, flower_seed = @flower_seed,
-			flower_name = @flower_name, tags = @tags, weather = @weather, images = @images
+			flower_name = @flower_name, tags = @tags, weather = @weather, images = @images,
+			song = @song
 		WHERE id = @id
 	`),
 	delete: db.prepare('DELETE FROM entries WHERE id = ?')
@@ -98,7 +101,8 @@ function entryToParams(entry: JournalEntry) {
 		flower_name: entry.flowerName,
 		tags: entry.tags ? JSON.stringify(entry.tags) : null,
 		weather: entry.weather ? JSON.stringify(entry.weather) : null,
-		images: entry.images ? JSON.stringify(entry.images) : null
+		images: entry.images ? JSON.stringify(entry.images) : null,
+		song: entry.song ? JSON.stringify(entry.song) : null
 	};
 }
 

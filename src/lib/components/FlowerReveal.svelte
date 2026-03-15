@@ -18,6 +18,8 @@
 	let glowTop = $state('40%');
 	let revealTimer: ReturnType<typeof setTimeout> | null = null;
 	let showTags = $state(false);
+	let lightboxOpen = $state(false);
+	let lightboxIndex = $state(0);
 	let flowerCanvas: HTMLCanvasElement;
 	let flowerSideEl: HTMLDivElement;
 	let textSideHeight = $state('auto');
@@ -137,7 +139,14 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') close();
+		if (e.key === 'Escape') {
+			if (lightboxOpen) { lightboxOpen = false; return; }
+			close();
+		}
+		if (lightboxOpen && entry?.images) {
+			if (e.key === 'ArrowLeft') lightboxIndex = (lightboxIndex - 1 + entry.images.length) % entry.images.length;
+			if (e.key === 'ArrowRight') lightboxIndex = (lightboxIndex + 1) % entry.images.length;
+		}
 	}
 
 	function formatDateLine(dateStr: string): string {
@@ -231,12 +240,49 @@
 							</div>
 						{/each}
 					</div>
+
+					{#if entry.song}
+						<div class="song-section">
+							<span class="song-heading">listening to</span>
+							<div class="song-card">
+								<img src={entry.song.albumArt} alt="" class="song-art" />
+								<div class="song-meta">
+									<span class="song-title">{entry.song.title}</span>
+									<span class="song-artist">{entry.song.artist}</span>
+								</div>
+								<a href={entry.song.spotifyUrl} target="_blank" rel="noopener noreferrer" class="song-link" aria-label="Open on Spotify">
+									<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+								</a>
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				<div class="text-side" style="height: {textSideHeight}">
 					{#if entry.title}
 						<h2 class="entry-title">{entry.title}</h2>
 					{/if}
+
+					{#if entry.images && entry.images.length > 0}
+						<div class="image-strip">
+							{#each entry.images.slice(0, 2) as img, i}
+								<!-- svelte-ignore a11y_click_events_have_key_events -->
+								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+								<img
+									src="/api/images/{img}"
+									alt=""
+									class="strip-img"
+									onclick={(e) => { e.stopPropagation(); lightboxIndex = i; lightboxOpen = true; }}
+								/>
+							{/each}
+							{#if entry.images.length > 2}
+								<button class="more-images" onclick={(e) => { e.stopPropagation(); lightboxIndex = 0; lightboxOpen = true; }}>
+									+{entry.images.length - 2} more
+								</button>
+							{/if}
+						</div>
+					{/if}
+
 					{#if renderedHtml}
 						<div class="journal-text" transition:fade={{ duration: 600 }}>
 							{@html renderedHtml}
@@ -254,6 +300,20 @@
 			</div>
 		</div>
 	</div>
+
+	{#if lightboxOpen && entry?.images}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="lightbox" transition:fade={{ duration: 200 }} onclick={() => (lightboxOpen = false)}>
+			<img src="/api/images/{entry.images[lightboxIndex]}" alt="" class="lightbox-img" onclick={(e) => e.stopPropagation()} />
+			<span class="lightbox-counter">{lightboxIndex + 1} / {entry.images.length}</span>
+			<button class="lightbox-close" onclick={() => (lightboxOpen = false)}>&times;</button>
+			{#if entry.images.length > 1}
+				<button class="lightbox-arrow lightbox-prev" onclick={(e) => { e.stopPropagation(); lightboxIndex = (lightboxIndex - 1 + entry.images!.length) % entry.images!.length; }}>&lsaquo;</button>
+				<button class="lightbox-arrow lightbox-next" onclick={(e) => { e.stopPropagation(); lightboxIndex = (lightboxIndex + 1) % entry.images!.length; }}>&rsaquo;</button>
+			{/if}
+		</div>
+	{/if}
 {/if}
 
 <style>
@@ -534,6 +594,97 @@
 	}
 
 
+	.image-strip {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 8px;
+		flex-shrink: 0;
+		align-items: center;
+	}
+
+	.strip-img {
+		height: 80px;
+		border-radius: 8px;
+		object-fit: cover;
+		cursor: var(--cursor-pointer, pointer);
+		transition: opacity 0.2s;
+	}
+	.strip-img:hover {
+		opacity: 0.8;
+	}
+
+	.more-images {
+		font-family: inherit;
+		font-size: 12px;
+		padding: 6px 14px;
+		border: 1px solid var(--ui-divider);
+		border-radius: 8px;
+		background: var(--ui-bar-bg, rgba(0,0,0,0.04));
+		color: var(--ui-text-muted);
+		cursor: var(--cursor-pointer, pointer);
+		white-space: nowrap;
+		transition: background 0.2s;
+	}
+	.more-images:hover {
+		background: var(--ui-divider);
+	}
+
+	.lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		background: rgba(0, 0, 0, 0.9);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.lightbox-img {
+		max-width: 90vw;
+		max-height: 85vh;
+		object-fit: contain;
+		border-radius: 4px;
+	}
+
+	.lightbox-close {
+		position: absolute;
+		top: 16px;
+		right: 20px;
+		font-size: 32px;
+		color: rgba(255, 255, 255, 0.7);
+		background: none;
+		border: none;
+		cursor: pointer;
+		line-height: 1;
+	}
+	.lightbox-close:hover { color: #fff; }
+
+	.lightbox-counter {
+		position: absolute;
+		bottom: 20px;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 13px;
+		color: rgba(255, 255, 255, 0.5);
+		letter-spacing: 1px;
+	}
+
+	.lightbox-arrow {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 48px;
+		color: rgba(255, 255, 255, 0.5);
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 8px 16px;
+		transition: color 0.2s;
+	}
+	.lightbox-arrow:hover { color: #fff; }
+	.lightbox-prev { left: 12px; }
+	.lightbox-next { right: 12px; }
+
 	.tags {
 		display: flex;
 		flex-wrap: wrap;
@@ -551,5 +702,73 @@
 		background: var(--ui-tag);
 		color: var(--ui-tag-text);
 		letter-spacing: 0.3px;
+	}
+
+	.song-section {
+		margin-top: 14px;
+	}
+
+	.song-heading {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 1.2px;
+		color: var(--ui-text-muted);
+		margin-bottom: 6px;
+		display: block;
+	}
+
+	.song-card {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 8px 10px;
+		border-radius: 10px;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+	}
+
+	.song-art {
+		width: 40px;
+		height: 40px;
+		border-radius: 6px;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	.song-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 0;
+		flex: 1;
+	}
+
+	.song-title {
+		font-size: 12px;
+		color: var(--ui-text);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.song-artist {
+		font-size: 10px;
+		color: var(--ui-text-muted);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.song-link {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 6px;
+		color: var(--ui-text-muted);
+		transition: color 0.2s;
+		text-decoration: none;
+	}
+	.song-link:hover {
+		color: var(--ui-text);
 	}
 </style>

@@ -34,7 +34,10 @@
       "Bash(node -e \"process.stdin.on\\(''''data'''',d=>console.log\\(JSON.parse\\(d\\).flowerName\\)\\)\" curl -s -X POST http://localhost:5173/api/entries -H \"Content-Type: application/json\" -b /tmp/cookies.txt -d '{\"\"\"\"date\"\"\"\":\"\"\"\"2026-01-29\"\"\"\",\"\"\"\"text\"\"\"\":\"\"\"\"Numbness\"\"\"\",\"\"\"\"mood\"\"\"\":{\"\"\"\"joy\"\"\"\":0.0,\"\"\"\"energy\"\"\"\":0.0,\"\"\"\"tenderness\"\"\"\":0.0,\"\"\"\"clarity\"\"\"\":0.0,\"\"\"\"hope\"\"\"\":0.0}}')",
       "Bash(node -e \"process.stdin.on\\(''''data'''',d=>console.log\\(JSON.parse\\(d\\).flowerName\\)\\)\" curl -s -X POST http://localhost:5173/api/entries -H \"Content-Type: application/json\" -b /tmp/cookies.txt -d '{\"\"\"\"date\"\"\"\":\"\"\"\"2026-01-28\"\"\"\",\"\"\"\"text\"\"\"\":\"\"\"\"Wistful nostalgia\"\"\"\",\"\"\"\"mood\"\"\"\":{\"\"\"\"joy\"\"\"\":0.4,\"\"\"\"energy\"\"\"\":0.2,\"\"\"\"tenderness\"\"\"\":0.7,\"\"\"\"clarity\"\"\"\":0.5,\"\"\"\"hope\"\"\"\":0.3}}')",
       "Bash(node -e \"const db = require\\(''better-sqlite3''\\)\\(''data/entries.db''\\); try { db.exec\\(\"\"ALTER TABLE entries ADD COLUMN weather TEXT\"\"\\); console.log\\(''done''\\); } catch\\(e\\) { console.log\\(e.message\\); }\")",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(node -e \"const pixi = require\\(''pixi.js''\\); console.log\\(Object.keys\\(pixi\\).filter\\(k => k.includes\\(''uffer''\\) || k.includes\\(''Source''\\) || k.includes\\(''Texture''\\)\\).sort\\(\\).join\\(''\\\\n''\\)\\)\")",
+      "Bash(npm run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)"
     ]
   }
 }

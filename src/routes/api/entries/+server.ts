@@ -19,8 +19,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const now = Date.now();
 	const id = crypto.randomUUID();
 
-	// Seed from UUID + date + timestamp for guaranteed uniqueness
-	const flowerSeed = hashString(id + body.date + now.toString());
+	// Use client-provided seed (matches preview) or generate one
+	const flowerSeed = typeof body.flowerSeed === 'number'
+		? body.flowerSeed
+		: hashString(id + body.date + now.toString());
 
 	const entry: JournalEntry = {
 		id,
@@ -33,7 +35,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		flowerSeed,
 		flowerName: generateFlowerName(body.mood, flowerSeed),
 		tags: body.tags,
-		weather: body.weather || undefined
+		weather: body.weather || undefined,
+		images: body.images || undefined,
+		song: body.song || undefined
 	};
 
 	createEntry(entry);

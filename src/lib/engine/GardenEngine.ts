@@ -19,10 +19,18 @@ export class GardenEngine {
 	private background: Graphics;
 	private theme: TimeTheme;
 	private themeUpdateTimer = 0;
+	private todayFlowers: FlowerSprite[] = [];
+	private todayStr = '';
+	private latestFlower: FlowerSprite | null = null;
+	private growInActive = false;
+	private growInTimer = 0;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
 
 	onFlowerClick: ((entry: JournalEntry) => void) | null = null;
+	onFlowerHover: ((entry: JournalEntry | null, screenX: number, screenY: number) => void) | null = null;
+	onTodayFlowers: ((positions: { entry: JournalEntry; x: number; y: number }[]) => void) | null = null;
+	onLatestFlower: ((pos: { entry: JournalEntry; x: number; y: number } | null) => void) | null = null;
 
 	constructor() {
 		this.app = new Application();
@@ -84,6 +92,15 @@ export class GardenEngine {
 		};
 	}
 
+	private worldToScreen(wx: number, wy: number): { x: number; y: number } {
+		const cx = this.app.screen.width / 2;
+		const cy = this.app.screen.height / 2;
+		return {
+			x: (wx + this.camera.x) * this.camera.zoom + cx,
+			y: (wy + this.camera.y) * this.camera.zoom + cy
+		};
+	}
+
 	private handleClick = (e: MouseEvent) => {
 		if (this.camera.wasDrag()) return;
 
@@ -97,6 +114,8 @@ export class GardenEngine {
 			}
 		}
 	};
+
+	private lastHoveredEntry: JournalEntry | null = null;
 
 	private handleHover = (e: PointerEvent) => {
 		const world = this.screenToWorld(e.clientX, e.clientY);
@@ -119,6 +138,13 @@ export class GardenEngine {
 			: hoveredFlower
 				? this.cursors.pointer
 				: this.cursors.default;
+
+		const hoveredEntry = hoveredFlower?.entry ?? null;
+		if (hoveredEntry !== this.lastHoveredEntry || hoveredEntry) {
+			this.lastHoveredEntry = hoveredEntry;
+			const rect = this.canvas.getBoundingClientRect();
+			this.onFlowerHover?.(hoveredEntry, e.clientX - rect.left, e.clientY - rect.top);
+		}
 	};
 
 	loadEntries(entries: JournalEntry[]) {
@@ -135,22 +161,39 @@ export class GardenEngine {
 			sorted.map((e) => e.date)
 		);
 
+		// Calculate stagger delay per flower (center-out grow-in)
+		const totalGrowDuration = Math.min(sorted.length * 0.06, 3); // cap at 3s
 		for (let i = 0; i < sorted.length; i++) {
 			const flower = new FlowerSprite(sorted[i]);
 			flower.setPosition(positions[i].x, positions[i].y);
+			// Stagger: earliest flower (center) grows first, newest (edge) last
+			const delay = (i / Math.max(1, sorted.length - 1)) * totalGrowDuration;
+			flower.setGrowIn(delay);
 			this.world.addChild(flower.container);
 			this.flowers.push(flower);
 		}
+
+		// Force all flower texture sources to upload to the GPU
+		for (const flower of this.flowers) {
+			flower.forceTextureUpload(this.app.renderer);
+		}
+
+		// Cache today's flowers and latest flower
+		this.todayStr = new Date().toISOString().split('T')[0];
+		this.todayFlowers = this.flowers.filter((f) => f.entry.date === this.todayStr);
+		this.latestFlower = this.flowers.length > 0 ? this.flowers[this.flowers.length - 1] : null;
 
 		// Generate grass across the garden
 		const bounds = getGardenBounds(positions);
 		this.grass.generate(bounds, positions);
 
-		// Focus camera on newest flower
-		if (positions.length > 0) {
-			const newest = positions[positions.length - 1];
-			this.camera.focusOn(newest.x, newest.y, 1.2);
-		}
+		// Start camera at center (0,0) during grow-in, then pan to newest
+		this.camera.focusOn(0, 0, 0.8);
+		this.camera.x = 0;
+		this.camera.y = 0;
+		this.camera.zoom = 0.8;
+		this.growInActive = true;
+		this.growInTimer = 0;
 
 		this.particles.setBounds(
 			this.app.screen.width / this.camera.zoom,
@@ -182,6 +225,42 @@ export class GardenEngine {
 		};
 		this.grass.update(dt, this.camera.zoom, viewBounds);
 		this.particles.update(dt);
+
+		// Grow-in → pause → camera pan to latest
+		if (this.growInActive) {
+			this.growInTimer += dt / 60; // seconds
+			const totalGrow = Math.min(this.flowers.length * 0.06, 3);
+			if (this.growInTimer > totalGrow + 1.5) {
+				this.growInActive = false;
+				if (this.latestFlower && !this.camera.userInteracted) {
+					this.camera.focusOn(this.latestFlower.worldX, this.latestFlower.worldY, 1.2);
+				}
+			}
+		}
+
+		// Emit today's flower screen positions — only for flowers that have finished growing
+		if (this.onTodayFlowers) {
+			const positions = this.todayFlowers
+				.filter((f) => f.isGrown)
+				.map((f) => {
+					const topY = f.worldY - f.flowerHeight;
+					const sp = this.worldToScreen(f.worldX, topY);
+					return { entry: f.entry, x: sp.x, y: sp.y };
+				});
+			this.onTodayFlowers(positions);
+		}
+
+		// Emit latest flower position — only if grown
+		if (this.onLatestFlower) {
+			if (this.latestFlower?.isGrown) {
+				const f = this.latestFlower;
+				const topY = f.worldY - f.flowerHeight;
+				const sp = this.worldToScreen(f.worldX, topY);
+				this.onLatestFlower({ entry: f.entry, x: sp.x, y: sp.y });
+			} else {
+				this.onLatestFlower(null);
+			}
+		}
 
 		this.themeUpdateTimer += dt;
 		if (this.themeUpdateTimer > 60) {

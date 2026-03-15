@@ -59,12 +59,13 @@
 	}
 
 	.axis-icon {
-		font-size: 14px;
-		width: 18px;
+		font-size: 20px;
+		width: 22px;
 		text-align: center;
 		color: var(--ui-text-muted, rgba(50,80,50,0.35));
 		user-select: none;
 		font-weight: 600;
+		line-height: 1;
 	}
 
 	.slider-container {

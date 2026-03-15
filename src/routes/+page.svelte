@@ -4,12 +4,16 @@
 	import JournalEditor from '$lib/components/JournalEditor.svelte';
 	import LoginDialog from '$lib/components/LoginDialog.svelte';
 	import { entries, isAdmin, cursorDefault, cursorPointer } from '$lib/stores/garden.js';
-	import { getTimePhase } from '$lib/engine/TimeOfDay.js';
+	import { getTimePhase, getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
+	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
 	import type { MoodVector } from '$lib/types.js';
 	import { fade, fly } from 'svelte/transition';
 
+	const ownerName = env.PUBLIC_OWNER_NAME || 'hikari';
+
 	const phase = getTimePhase();
+	const editorThemeStyle = getUIThemeStyle();
 
 	let { data }: { data: PageData } = $props();
 
@@ -29,7 +33,7 @@
 		entries.set(data.entries);
 	});
 
-	async function handleSubmit(entry: { title: string; text: string; mood: MoodVector; date: string; tags: string[]; weather?: import('$lib/types.js').Weather }) {
+	async function handleSubmit(entry: { title: string; text: string; mood: MoodVector; date: string; tags: string[]; weather?: import('$lib/types.js').Weather; images?: string[]; song?: import('$lib/types.js').Song; flowerSeed?: number }) {
 		const res = await fetch('/api/entries', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -39,10 +43,9 @@
 		if (res.ok) {
 			const newEntry = await res.json();
 			entries.update((e) => [...e, newEntry]);
-			showEditor = false;
 		} else {
 			const err = await res.json();
-			alert(err.error || 'Failed to save entry');
+			throw new Error(err.error || 'Failed to save entry');
 		}
 	}
 
@@ -57,7 +60,7 @@
 
 {#if showWelcome}
 	<div class="welcome phase-{phase}" transition:fade={{ duration: 1200 }}>
-		<p in:fly={{ y: -20, duration: 1000, delay: 300 }}>welcome to the garden</p>
+		<p in:fly={{ y: -20, duration: 1000, delay: 300 }}>welcome to {ownerName}'s garden</p>
 	</div>
 {/if}
 
@@ -90,7 +93,7 @@
 {#if showEditor}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="editor-overlay" style="cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
+	<div class="editor-overlay" style="{editorThemeStyle};cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
 		<div onclick={(e) => e.stopPropagation()}>
 			<JournalEditor onsubmit={handleSubmit} oncancel={() => (showEditor = false)} />
 		</div>
@@ -219,16 +222,16 @@
 		font-size: 28px;
 		font-weight: 400;
 		letter-spacing: 4px;
-		color: rgba(255, 255, 255, 0.6);
-		text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+		color: rgba(255, 255, 255, 0.85);
+		text-shadow: 0 0 30px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.4);
 	}
 	.welcome.phase-day p {
-		color: rgba(40, 60, 40, 0.4);
-		text-shadow: none;
+		color: rgba(40, 60, 40, 0.65);
+		text-shadow: 0 1px 8px rgba(255, 255, 255, 0.5);
 	}
 	.welcome.phase-dawn p {
-		color: rgba(100, 60, 30, 0.45);
-		text-shadow: none;
+		color: rgba(100, 60, 30, 0.7);
+		text-shadow: 0 1px 8px rgba(255, 245, 230, 0.4);
 	}
 
 	.editor-overlay {
@@ -238,8 +241,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(0, 0, 0, 0.3);
-		backdrop-filter: blur(8px);
-		-webkit-backdrop-filter: blur(8px);
+		background: var(--ui-overlay);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
 	}
 </style>

@@ -1,4 +1,4 @@
-import type { FlowerDNA } from '$lib/types.js';
+import type { FlowerDNA, PetalShapeId } from '$lib/types.js';
 import { getPetalTemplate } from './PetalShapes.js';
 import { hexToRgb, lerpColor } from './ColorPalettes.js';
 
@@ -33,12 +33,11 @@ function setPixel(
 
 function drawStem(data: Uint8ClampedArray, w: number, dna: FlowerDNA) {
 	const cx = Math.floor(w / 2);
-	const stemTop = CANVAS_H - dna.stemHeight - 6; // leave room for flower head
+	const stemTop = CANVAS_H - dna.stemHeight - 6;
 	const stemBottom = CANVAS_H - 1;
 
 	for (let y = stemBottom; y >= stemTop; y--) {
 		const progress = (stemBottom - y) / (stemBottom - stemTop);
-		// Curve the stem based on tenderness
 		const curveOffset = Math.round(Math.sin(progress * Math.PI) * dna.stemCurve * 3);
 		setPixel(data, w, cx + curveOffset, y, dna.stemColor);
 		// Thicker base
@@ -47,49 +46,69 @@ function drawStem(data: Uint8ClampedArray, w: number, dna: FlowerDNA) {
 		}
 	}
 
-	// Leaves
+	// Leaves — alternate between small and larger
 	for (let l = 0; l < dna.leafCount; l++) {
-		const leafY = Math.round(stemBottom - (dna.stemHeight * (0.3 + l * 0.25)));
+		const leafY = Math.round(stemBottom - dna.stemHeight * (0.25 + l * 0.22));
 		const side = l % 2 === 0 ? 1 : -1;
 		const curveAtLeaf = Math.round(
 			Math.sin(((stemBottom - leafY) / (stemBottom - stemTop)) * Math.PI) * dna.stemCurve * 3
 		);
 		const leafX = cx + curveAtLeaf;
 
-		// Simple 3-pixel leaf
-		setPixel(data, w, leafX + side, leafY, dna.stemColor);
-		setPixel(data, w, leafX + side * 2, leafY, dna.stemColor);
-		setPixel(data, w, leafX + side * 2, leafY - 1, dna.stemColor);
+		if (l % 3 === 0 && dna.leafCount >= 2) {
+			// Larger leaf (5 pixels)
+			setPixel(data, w, leafX + side, leafY, dna.stemColor);
+			setPixel(data, w, leafX + side * 2, leafY, dna.stemColor);
+			setPixel(data, w, leafX + side * 2, leafY - 1, dna.stemColor);
+			setPixel(data, w, leafX + side * 3, leafY, dna.stemColor);
+			setPixel(data, w, leafX + side * 2, leafY + 1, dna.stemColor);
+		} else {
+			// Small leaf (3 pixels)
+			setPixel(data, w, leafX + side, leafY, dna.stemColor);
+			setPixel(data, w, leafX + side * 2, leafY, dna.stemColor);
+			setPixel(data, w, leafX + side * 2, leafY - 1, dna.stemColor);
+		}
 	}
 
 	return stemTop;
 }
 
-function drawPetals(data: Uint8ClampedArray, w: number, dna: FlowerDNA, centerY: number) {
+function drawPetalRing(
+	data: Uint8ClampedArray,
+	w: number,
+	dna: FlowerDNA,
+	centerY: number,
+	count: number,
+	shape: PetalShapeId,
+	size: number,
+	colors: [string, string],
+	angleOffset: number,
+	droopAmount: number,
+	variation: number[]
+) {
 	const cx = Math.floor(w / 2);
-	const template = getPetalTemplate(dna.petalShape);
-	const bloomScale = 0.3 + dna.bloomState * 0.7; // buds are smaller
+	const template = getPetalTemplate(shape);
+	const bloomScale = 0.3 + dna.bloomState * 0.7;
 
-	for (let p = 0; p < dna.petalCount; p++) {
-		const angle = (p / dna.petalCount) * Math.PI * 2 + dna.rotation;
-		const variation = dna.petalVariation[p] ?? 1;
-		const dist = (template.height * 0.5 + 1) * bloomScale * dna.petalSize * variation;
+	for (let p = 0; p < count; p++) {
+		const angle = (p / count) * Math.PI * 2 + dna.rotation + angleOffset;
+		const v = variation[p % variation.length] ?? 1;
+		const dist = (template.height * 0.5 + 1) * bloomScale * size * v;
 
-		// Petal center position
 		const px = cx + Math.round(Math.cos(angle) * dist);
-		const py = centerY + Math.round(Math.sin(angle) * dist * 0.7); // squish vertically
+		// Apply droop: upper petals sag downward
+		const droopFactor = (1 - Math.sin(angle)) * 0.5; // 0 at bottom, 1 at top
+		const droopY = Math.round(droopAmount * 6 * droopFactor);
+		const py = centerY + Math.round(Math.sin(angle) * dist * 0.7) + droopY;
 
-		// Color gradient across petal
-		const colorT = p / dna.petalCount;
-		const petalColor = lerpColor(dna.petalColors[0], dna.petalColors[1], colorT);
+		const colorT = p / count;
+		const petalColor = lerpColor(colors[0], colors[1], colorT);
 
-		// Draw petal pixels
-		const scale = dna.petalSize * variation * bloomScale;
+		const scale = size * v * bloomScale;
 		for (const [tx, ty] of template.pixels) {
 			const sx = Math.round((tx - template.width / 2) * scale);
 			const sy = Math.round((ty - template.height / 2) * scale);
 
-			// Rotate pixel around petal center
 			const cos = Math.cos(angle);
 			const sin = Math.sin(angle);
 			const rx = Math.round(sx * cos - sy * sin);
@@ -100,11 +119,60 @@ function drawPetals(data: Uint8ClampedArray, w: number, dna: FlowerDNA, centerY:
 	}
 }
 
+function drawPetals(data: Uint8ClampedArray, w: number, dna: FlowerDNA, centerY: number) {
+	if (dna.petalLayers >= 2) {
+		// Outer ring: fewer, larger petals
+		const outerCount = Math.max(3, Math.floor(dna.petalCount * 0.7));
+		drawPetalRing(
+			data,
+			w,
+			dna,
+			centerY,
+			outerCount,
+			dna.petalShape,
+			dna.petalSize * 1.25,
+			dna.petalColors,
+			0,
+			dna.droopAngle,
+			dna.petalVariation
+		);
+		// Inner ring: full count, smaller, different shape/color
+		drawPetalRing(
+			data,
+			w,
+			dna,
+			centerY,
+			dna.petalCount,
+			dna.innerPetalShape,
+			dna.petalSize * 0.7,
+			[dna.innerPetalColor, dna.petalColors[1]],
+			Math.PI / outerCount,
+			dna.droopAngle * 0.4,
+			dna.petalVariation
+		);
+	} else {
+		// Single layer
+		drawPetalRing(
+			data,
+			w,
+			dna,
+			centerY,
+			dna.petalCount,
+			dna.petalShape,
+			dna.petalSize,
+			dna.petalColors,
+			0,
+			dna.droopAngle,
+			dna.petalVariation
+		);
+	}
+}
+
 function drawCenter(data: Uint8ClampedArray, w: number, dna: FlowerDNA, centerY: number) {
 	const cx = Math.floor(w / 2);
-	const size = Math.max(1, Math.round(dna.petalSize * 1.5));
+	const size = Math.max(1, Math.round(dna.centerSize));
 
-	// Draw a small circle for the center
+	// Filled circle
 	for (let dy = -size; dy <= size; dy++) {
 		for (let dx = -size; dx <= size; dx++) {
 			if (dx * dx + dy * dy <= size * size) {
@@ -113,13 +181,24 @@ function drawCenter(data: Uint8ClampedArray, w: number, dna: FlowerDNA, centerY:
 		}
 	}
 
-	// Sparkle effect — small bright dots around center
+	// Accent ring around center for larger centers
+	if (size >= 2) {
+		for (let a = 0; a < 8; a++) {
+			const angle = (a / 8) * Math.PI * 2;
+			const ax = Math.round(Math.cos(angle) * (size + 1));
+			const ay = Math.round(Math.sin(angle) * (size + 1));
+			setPixel(data, w, cx + ax, centerY + ay, dna.accentColor, 180);
+		}
+	}
+
+	// Sparkle dots
 	if (dna.sparkle) {
+		const sr = size + 2;
 		const sparklePositions = [
-			[-2, -2],
-			[2, -2],
-			[-2, 2],
-			[2, 2]
+			[-sr, -sr],
+			[sr, -sr],
+			[-sr, sr],
+			[sr, sr]
 		];
 		for (const [dx, dy] of sparklePositions) {
 			setPixel(data, w, cx + dx, centerY + dy, '#ffffff', 200);
@@ -172,12 +251,23 @@ export function renderFlowerFrame(
 			const i = (y * w + x) * 4;
 			if (base.pixels[i + 3] > 0) {
 				pixels.push([x, y]);
-				// Check if edge (has a transparent neighbor)
 				let isEdge = false;
-				for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-					const nx = x + dx, ny = y + dy;
-					if (nx < 0 || nx >= w || ny < 0 || ny >= h) { isEdge = true; break; }
-					if (base.pixels[(ny * w + nx) * 4 + 3] === 0) { isEdge = true; break; }
+				for (const [dx, dy] of [
+					[1, 0],
+					[-1, 0],
+					[0, 1],
+					[0, -1]
+				]) {
+					const nx = x + dx,
+						ny = y + dy;
+					if (nx < 0 || nx >= w || ny < 0 || ny >= h) {
+						isEdge = true;
+						break;
+					}
+					if (base.pixels[(ny * w + nx) * 4 + 3] === 0) {
+						isEdge = true;
+						break;
+					}
 				}
 				if (isEdge) edgePixels.push([x, y]);
 			}
@@ -200,18 +290,28 @@ export function renderFlowerFrame(
 	for (let j = 0; j < shiftCount; j++) {
 		const [px, py] = edgePixels[Math.floor(rng() * edgePixels.length)];
 		const i = (py * w + px) * 4;
-		if (out[i + 3] === 0) continue; // already moved
+		if (out[i + 3] === 0) continue;
 
-		const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+		const dirs = [
+			[1, 0],
+			[-1, 0],
+			[0, 1],
+			[0, -1]
+		];
 		const dir = dirs[Math.floor(rng() * 4)];
 		const nx = px + dir[0];
 		const ny = py + dir[1];
 		if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
 			const ni = (ny * w + nx) * 4;
 			if (out[ni + 3] === 0) {
-				out[ni] = out[i]; out[ni + 1] = out[i + 1];
-				out[ni + 2] = out[i + 2]; out[ni + 3] = out[i + 3];
-				out[i] = 0; out[i + 1] = 0; out[i + 2] = 0; out[i + 3] = 0;
+				out[ni] = out[i];
+				out[ni + 1] = out[i + 1];
+				out[ni + 2] = out[i + 2];
+				out[ni + 3] = out[i + 3];
+				out[i] = 0;
+				out[i + 1] = 0;
+				out[i + 2] = 0;
+				out[i + 3] = 0;
 			}
 		}
 	}

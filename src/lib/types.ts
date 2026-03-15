@@ -12,6 +12,14 @@ export interface Weather {
 	condition: string; // e.g. "Clear", "Cloudy"
 }
 
+export interface Song {
+	trackId: string; // Spotify track ID
+	title: string;
+	artist: string;
+	albumArt: string; // URL to album artwork
+	spotifyUrl: string; // External Spotify URL for playback
+}
+
 export interface JournalEntry {
 	id: string;
 	date: string; // YYYY-MM-DD
@@ -25,6 +33,7 @@ export interface JournalEntry {
 	tags?: string[];
 	weather?: Weather;
 	images?: string[];
+	song?: Song;
 }
 
 export type PetalShapeId =
@@ -35,16 +44,22 @@ export type PetalShapeId =
 	| 'teardrop'
 	| 'jagged'
 	| 'wispy'
-	| 'bell';
+	| 'bell'
+	| 'spade'
+	| 'flame'
+	| 'crescent'
+	| 'needle'
+	| 'fan'
+	| 'lotus';
 
 export interface FlowerDNA {
-	petalCount: number; // 3–12
+	petalCount: number; // 3–14
 	petalShape: PetalShapeId;
 	petalSize: number;
 	bloomState: number; // 0–1: bud → full bloom
-	stemHeight: number; // 8–24 pixels
+	stemHeight: number; // 6–28 pixels
 	stemCurve: number;
-	leafCount: number; // 0–3
+	leafCount: number; // 0–4
 
 	petalColors: [string, string]; // gradient pair
 	centerColor: string;
@@ -54,4 +69,14 @@ export interface FlowerDNA {
 	rotation: number;
 	petalVariation: number[];
 	sparkle: boolean;
+
+	// Layered petals
+	petalLayers: number; // 1–2 rings
+	innerPetalShape: PetalShapeId;
+	innerPetalColor: string;
+
+	// Shape modifiers
+	droopAngle: number; // 0–1: how much petals droop
+	centerSize: number; // 0.5–3
+	accentColor: string;
 }
