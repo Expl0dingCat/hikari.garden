@@ -32,4 +32,11 @@ db.exec(`
 	);
 `);
 
+// Migrations
+const cols = db.prepare("PRAGMA table_info(entries)").all() as { name: string }[];
+const colNames = cols.map((c) => c.name);
+if (!colNames.includes('images')) {
+	db.exec("ALTER TABLE entries ADD COLUMN images TEXT");
+}
+
 export default db;

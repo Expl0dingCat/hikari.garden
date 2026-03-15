@@ -24,6 +24,7 @@ export interface JournalEntry {
 	flowerName: string;
 	tags?: string[];
 	weather?: Weather;
+	images?: string[];
 }
 
 export type PetalShapeId =

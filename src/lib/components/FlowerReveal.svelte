@@ -5,6 +5,10 @@
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
 	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { marked } from 'marked';
+	import { env } from '$env/dynamic/public';
+
+	const OWNER_TZ = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
+	const OWNER_TZ_LABEL = env.PUBLIC_OWNER_TIMEZONE_LABEL || 'Toronto';
 
 	let visible = $derived($selectedFlower !== null);
 	let entry = $derived($selectedFlower);
@@ -158,21 +162,20 @@
 		return null;
 	}
 
-	function formatTimeEST(createdAt: number): string {
+	function formatTimeOwner(createdAt: number): string {
 		const t = new Date(createdAt);
 		return t.toLocaleTimeString('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
 			hour12: true,
-			timeZone: 'America/New_York'
+			timeZone: OWNER_TZ
 		});
 	}
 
 	function formatTimeLocal(createdAt: number): string {
 		const t = new Date(createdAt);
 		const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-		const isEST = localTz === 'America/New_York';
-		if (isEST) return '';
+		if (localTz === OWNER_TZ) return '';
 		const localTime = t.toLocaleTimeString('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
@@ -196,7 +199,7 @@
 					{#if relativeDate(entry.date)}
 						<span class="meta-tag">{relativeDate(entry.date)}</span>
 					{/if}
-					<span class="meta-tag time-tag" title={formatTimeLocal(entry.createdAt) || 'EST'}>{formatTimeEST(entry.createdAt)}</span>
+					<span class="meta-tag time-tag" title={formatTimeLocal(entry.createdAt) || OWNER_TZ_LABEL}>{formatTimeOwner(entry.createdAt)}</span>
 					{#if entry.weather}
 						<span class="meta-tag weather-tag">{@html getWeatherSvg(entry.weather.icon)} {entry.weather.temp}°C</span>
 					{/if}

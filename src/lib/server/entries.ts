@@ -17,6 +17,7 @@ interface EntryRow {
 	flower_name: string;
 	tags: string | null;
 	weather: string | null;
+	images: string | null;
 }
 
 function rowToEntry(row: EntryRow): JournalEntry {
@@ -37,7 +38,8 @@ function rowToEntry(row: EntryRow): JournalEntry {
 		flowerSeed: row.flower_seed,
 		flowerName: row.flower_name,
 		tags: row.tags ? JSON.parse(row.tags) : undefined,
-		weather: row.weather ? JSON.parse(row.weather) : undefined
+		weather: row.weather ? JSON.parse(row.weather) : undefined,
+		images: row.images ? JSON.parse(row.images) : undefined
 	};
 }
 
@@ -48,10 +50,10 @@ const stmts = {
 	insert: db.prepare(`
 		INSERT INTO entries (id, date, created_at, updated_at, title, text,
 			mood_joy, mood_energy, mood_tenderness, mood_clarity, mood_hope,
-			flower_seed, flower_name, tags, weather)
+			flower_seed, flower_name, tags, weather, images)
 		VALUES (@id, @date, @created_at, @updated_at, @title, @text,
 			@mood_joy, @mood_energy, @mood_tenderness, @mood_clarity, @mood_hope,
-			@flower_seed, @flower_name, @tags, @weather)
+			@flower_seed, @flower_name, @tags, @weather, @images)
 	`),
 	update: db.prepare(`
 		UPDATE entries SET
@@ -59,7 +61,7 @@ const stmts = {
 			mood_joy = @mood_joy, mood_energy = @mood_energy,
 			mood_tenderness = @mood_tenderness, mood_clarity = @mood_clarity,
 			mood_hope = @mood_hope, flower_seed = @flower_seed,
-			flower_name = @flower_name, tags = @tags, weather = @weather
+			flower_name = @flower_name, tags = @tags, weather = @weather, images = @images
 		WHERE id = @id
 	`),
 	delete: db.prepare('DELETE FROM entries WHERE id = ?')
@@ -95,7 +97,8 @@ function entryToParams(entry: JournalEntry) {
 		flower_seed: entry.flowerSeed,
 		flower_name: entry.flowerName,
 		tags: entry.tags ? JSON.stringify(entry.tags) : null,
-		weather: entry.weather ? JSON.stringify(entry.weather) : null
+		weather: entry.weather ? JSON.stringify(entry.weather) : null,
+		images: entry.images ? JSON.stringify(entry.images) : null
 	};
 }
 
