@@ -52,12 +52,12 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="overlay" style="{themeStyle};cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={onclose}>
 	<div class="dialog" onclick={(e) => e.stopPropagation()}>
-		<h2>enter the garden</h2>
+		<h2>enter the garden?</h2>
 		<form onsubmit={(e) => { e.preventDefault(); handleLogin(); }}>
 			<input
 				type="password"
 				bind:value={password}
-				placeholder="password"
+				placeholder="key"
 				class="password-input"
 				autofocus
 			/>

@@ -32,6 +32,10 @@ export class FlowerSprite {
 	private growProgress = 1; // 0 = hidden, 1 = fully grown
 	private growDelay = 0;
 	private growStarted = false;
+	private shrinking = false;
+	private shrinkProgress = 0;
+	private shrinkDelay = 0;
+	private shrinkStarted = false;
 	private sparkles: Sparkle[] = [];
 	private sparkleAlpha = 0;
 
@@ -145,13 +149,38 @@ export class FlowerSprite {
 	}
 
 	get isGrown(): boolean {
-		return this.growProgress >= 1;
+		return this.growProgress >= 1 && !this.shrinking;
+	}
+
+	/** Set up shrink-out animation: shrinks to 0 after delay (seconds) */
+	setShrinkOut(delay: number) {
+		this.shrinking = true;
+		this.shrinkProgress = 0;
+		this.shrinkDelay = delay;
+		this.shrinkStarted = false;
+	}
+
+	get isShrunk(): boolean {
+		return this.shrinking && this.shrinkProgress >= 1;
 	}
 
 	update(_dt: number) {
 		this.hoverScale += (this.targetHoverScale - this.hoverScale) * 0.15;
 
 		const time = performance.now() / 1000;
+
+		// Shrink-out animation
+		if (this.shrinking) {
+			if (!this.shrinkStarted) {
+				this.shrinkDelay -= _dt / 60;
+				if (this.shrinkDelay <= 0) this.shrinkStarted = true;
+				else return;
+			}
+			this.shrinkProgress = Math.min(1, this.shrinkProgress + 0.06);
+			const t = 1 - this.shrinkProgress; // 1 → 0
+			this.container.scale.set(t * t); // ease-in (accelerating shrink)
+			return;
+		}
 
 		// Grow-in animation
 		if (this.growProgress < 1) {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { GardenEngine } from '$lib/engine/GardenEngine.js';
-	import { entries, selectedFlower } from '$lib/stores/garden.js';
+	import { monthEntries, selectedFlower, currentMonth, availableMonths } from '$lib/stores/garden.js';
 	import type { JournalEntry } from '$lib/types.js';
 
 	let canvas: HTMLCanvasElement;
@@ -15,6 +15,11 @@
 
 	let todayPins = $state<{ entry: JournalEntry; x: number; y: number }[]>([]);
 	let latestPin = $state<{ entry: JournalEntry; x: number; y: number } | null>(null);
+
+	let isLatestMonth = $derived(
+		$availableMonths.length === 0 ||
+		$currentMonth === $availableMonths[$availableMonths.length - 1]
+	);
 
 	let loadedIds: string = '';
 
@@ -46,7 +51,7 @@
 
 			// Wait one frame so the WebGL context is fully ready before loading textures
 			requestAnimationFrame(() => {
-				unsub = entries.subscribe((e) => {
+				unsub = monthEntries.subscribe((e) => {
 					const newIds = e.map((x) => x.id).join(',');
 					if (newIds === loadedIds) {
 						// Only data changed (e.g. smell count), update entry refs without re-rendering
@@ -54,12 +59,17 @@
 						return;
 					}
 					const isAdd = loadedIds.length > 0 && e.length > 0 && newIds.startsWith(loadedIds);
+					const isFirstLoad = loadedIds.length === 0;
 					loadedIds = newIds;
 					if (isAdd) {
 						// New flower added — reload without grow-in, recenter to latest
 						engine.loadEntries(e, true);
-					} else {
+					} else if (isFirstLoad) {
+						// Initial load — grow in from center
 						engine.loadEntries(e);
+					} else {
+						// Month switch — shrink out old, grow in new
+						engine.transitionEntries(e);
 					}
 				});
 			});
@@ -83,7 +93,7 @@
 	<canvas bind:this={canvas}></canvas>
 
 	{#each todayPins as pin (pin.entry.id)}
-		{#if !latestPin || pin.entry.id !== latestPin.entry.id}
+		{#if !latestPin || !isLatestMonth || pin.entry.id !== latestPin.entry.id}
 			<div
 				class="pin today-pin"
 				style="left: {pin.x}px; top: {pin.y}px"
@@ -93,7 +103,7 @@
 		{/if}
 	{/each}
 
-	{#if latestPin}
+	{#if latestPin && isLatestMonth}
 		<div
 			class="pin latest-pin"
 			style="left: {latestPin.x}px; top: {latestPin.y}px"

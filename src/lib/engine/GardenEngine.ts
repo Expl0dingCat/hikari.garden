@@ -24,6 +24,8 @@ export class GardenEngine {
 	private latestFlower: FlowerSprite | null = null;
 	private growInActive = false;
 	private growInTimer = 0;
+	private shrinkOutActive = false;
+	private pendingEntries: JournalEntry[] | null = null;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
 
@@ -69,8 +71,11 @@ export class GardenEngine {
 		this.app.stage.addChild(this.background);
 		this.app.stage.addChild(this.world);
 
+		this.world.sortableChildren = true;
 		this.world.addChild(this.grass.container);
+		this.grass.container.zIndex = -10000;
 		this.world.addChild(this.particles.container);
+		this.particles.container.zIndex = 10000;
 
 		// Manual click + hover detection on canvas
 		canvas.addEventListener('click', this.handleClick);
@@ -156,11 +161,41 @@ export class GardenEngine {
 		}
 	}
 
+	/** Shrink out current flowers, then load new entries with grow-in */
+	transitionEntries(entries: JournalEntry[]) {
+		if (this.flowers.length === 0) {
+			this.loadEntries(entries);
+			return;
+		}
+
+		// Cancel any ongoing grow-in
+		this.growInActive = false;
+
+		// Stagger shrink from outside-in (outermost flowers shrink first)
+		const n = this.flowers.length;
+		const totalShrinkDuration = Math.min(n * 0.03, 1);
+		for (let i = 0; i < n; i++) {
+			const delay = ((n - 1 - i) / Math.max(1, n - 1)) * totalShrinkDuration;
+			this.flowers[i].setShrinkOut(delay);
+		}
+
+		// Shrink grass out too
+		this.grass.shrinkOut();
+
+		this.pendingEntries = entries;
+		this.shrinkOutActive = true;
+	}
+
 	loadEntries(entries: JournalEntry[], skipGrowIn = false) {
 		for (const f of this.flowers) f.destroy();
 		this.flowers = [];
+		this.todayFlowers = [];
+		this.latestFlower = null;
 
-		if (entries.length === 0) return;
+		if (entries.length === 0) {
+			this.grass.generate({ minX: 0, maxX: 0, minY: 0, maxY: 0 }, []);
+			return;
+		}
 
 		const sorted = [...entries].sort((a, b) =>
 			a.date.localeCompare(b.date) || a.createdAt - b.createdAt
@@ -175,6 +210,7 @@ export class GardenEngine {
 			for (let i = 0; i < sorted.length; i++) {
 				const flower = new FlowerSprite(sorted[i]);
 				flower.setPosition(positions[i].x, positions[i].y);
+				flower.container.zIndex = positions[i].y;
 				this.world.addChild(flower.container);
 				this.flowers.push(flower);
 			}
@@ -184,6 +220,7 @@ export class GardenEngine {
 			for (let i = 0; i < sorted.length; i++) {
 				const flower = new FlowerSprite(sorted[i]);
 				flower.setPosition(positions[i].x, positions[i].y);
+				flower.container.zIndex = positions[i].y;
 				const delay = (i / Math.max(1, sorted.length - 1)) * totalGrowDuration;
 				flower.setGrowIn(delay);
 				this.world.addChild(flower.container);
@@ -196,13 +233,15 @@ export class GardenEngine {
 			flower.forceTextureUpload(this.app.renderer);
 		}
 
-		// Cache today's flowers and latest flower
-		this.todayStr = new Date().toISOString().split('T')[0];
+		// Cache today's flowers and latest flower (use local date, not UTC)
+		const now = new Date();
+		this.todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 		this.todayFlowers = this.flowers.filter((f) => f.entry.date === this.todayStr);
 		this.latestFlower = this.flowers.length > 0 ? this.flowers[this.flowers.length - 1] : null;
 
 		// Generate grass across the garden
 		const bounds = getGardenBounds(positions);
+		this.grass.container.alpha = 1;
 		this.grass.generate(bounds, positions);
 
 		if (skipGrowIn) {
@@ -251,6 +290,18 @@ export class GardenEngine {
 		};
 		this.grass.update(dt, this.camera.zoom, viewBounds);
 		this.particles.update(dt);
+
+		// Shrink-out → wait for flowers + grass to finish, then load pending entries
+		if (this.shrinkOutActive) {
+			if (this.flowers.every((f) => f.isShrunk) && this.grass.allShrunk) {
+				this.shrinkOutActive = false;
+				const pending = this.pendingEntries;
+				this.pendingEntries = null;
+				if (pending) {
+					this.loadEntries(pending);
+				}
+			}
+		}
 
 		// Grow-in → pause → camera pan to latest
 		if (this.growInActive) {

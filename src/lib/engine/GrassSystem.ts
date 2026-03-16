@@ -36,6 +36,8 @@ interface PlacedClump {
 	lodPriority: number;
 	growDelay: number;
 	growProgress: number;
+	shrinkDelay: number;
+	shrinkProgress: number;
 }
 
 function hexToRgb(hex: number): [number, number, number] {
@@ -120,6 +122,7 @@ export class GrassSystem {
 	private textures: Texture[][] = [];
 	private generated = false;
 	private growInActive = false;
+	private shrinkOutActive = false;
 	private gardenRadius = 0;
 
 	constructor() {
@@ -146,6 +149,7 @@ export class GrassSystem {
 		for (const c of this.clumps) c.sprite.destroy();
 		this.clumps = [];
 		this.container.removeChildren();
+		this.shrinkOutActive = false;
 
 		this.ensureTextures();
 
@@ -213,7 +217,9 @@ export class GrassSystem {
 					speed: 0.04 + Math.random() * 0.08,
 					lodPriority: lod,
 					growDelay,
-					growProgress: 0
+					growProgress: 0,
+					shrinkDelay: 0,
+					shrinkProgress: 0
 				});
 			}
 		}
@@ -221,6 +227,23 @@ export class GrassSystem {
 		this.gardenRadius = gardenRadius;
 		this.growInActive = true;
 		this.generated = true;
+	}
+
+	/** Start shrink-out animation — outside-in, reverse of grow */
+	shrinkOut() {
+		this.shrinkOutActive = true;
+		this.growInActive = false;
+		for (const clump of this.clumps) {
+			const dist = Math.sqrt(clump.x * clump.x + clump.y * clump.y);
+			// Outside shrinks first (lower delay), center shrinks last
+			clump.shrinkDelay = ((this.gardenRadius - dist) / Math.max(1, this.gardenRadius)) * 1.5 + Math.random() * 0.2;
+			clump.shrinkProgress = 0;
+		}
+	}
+
+	get allShrunk(): boolean {
+		if (!this.shrinkOutActive) return true;
+		return this.clumps.every((c) => c.shrinkProgress >= 1);
 	}
 
 	update(dt: number, zoom: number = 1, viewBounds?: { left: number; right: number; top: number; bottom: number }) {
@@ -231,8 +254,27 @@ export class GrassSystem {
 		const margin = (CLUMP_W * SCALE) / 2 + 10;
 		const dtSec = dt / 60;
 		let allGrown = true;
+		let allShrunk = true;
 
 		for (const clump of this.clumps) {
+			// Shrink-out animation (takes priority)
+			if (this.shrinkOutActive) {
+				if (clump.shrinkProgress < 1) {
+					clump.shrinkDelay -= dtSec;
+					if (clump.shrinkDelay > 0) {
+						allShrunk = false;
+						continue;
+					}
+					clump.shrinkProgress = Math.min(1, clump.shrinkProgress + 0.06);
+					const t = 1 - clump.shrinkProgress;
+					clump.sprite.scale.set(SCALE * t * t); // ease-in shrink
+					allShrunk = false;
+				} else {
+					clump.sprite.scale.set(0);
+				}
+				continue;
+			}
+
 			// Grow-in animation
 			if (this.growInActive && clump.growProgress < 1) {
 				clump.growDelay -= dtSec;
@@ -273,6 +315,9 @@ export class GrassSystem {
 
 		if (this.growInActive && allGrown) {
 			this.growInActive = false;
+		}
+		if (this.shrinkOutActive && allShrunk) {
+			this.shrinkOutActive = false;
 		}
 	}
 

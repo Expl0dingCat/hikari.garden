@@ -3,7 +3,7 @@
 	import FlowerReveal from '$lib/components/FlowerReveal.svelte';
 	import JournalEditor from '$lib/components/JournalEditor.svelte';
 	import LoginDialog from '$lib/components/LoginDialog.svelte';
-	import { entries, isAdmin, cursorDefault, cursorPointer } from '$lib/stores/garden.js';
+	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries } from '$lib/stores/garden.js';
 	import { getTimePhase, getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
@@ -43,11 +43,42 @@
 		if (res.ok) {
 			const newEntry = await res.json();
 			entries.update((e) => [...e, newEntry]);
+			// Switch to the new entry's month
+			currentMonth.set(newEntry.date.slice(0, 7));
 		} else {
 			const err = await res.json();
 			throw new Error(err.error || 'Failed to save entry');
 		}
 	}
+
+	function formatMonth(ym: string): string {
+		const [y, m] = ym.split('-');
+		const d = new Date(parseInt(y), parseInt(m) - 1);
+		return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+	}
+
+	function prevMonth() {
+		const months = $availableMonths;
+		const idx = months.indexOf($currentMonth);
+		if (idx > 0) currentMonth.set(months[idx - 1]);
+	}
+
+	function nextMonth() {
+		const months = $availableMonths;
+		const idx = months.indexOf($currentMonth);
+		if (idx < months.length - 1) currentMonth.set(months[idx + 1]);
+	}
+
+	let hasPrev = $derived($availableMonths.indexOf($currentMonth) > 0);
+	let hasNext = $derived($availableMonths.indexOf($currentMonth) < $availableMonths.length - 1);
+
+	// When entries load, ensure currentMonth is valid (default to latest month with entries)
+	$effect(() => {
+		const months = $availableMonths;
+		if (months.length > 0 && !months.includes($currentMonth)) {
+			currentMonth.set(months[months.length - 1]);
+		}
+	});
 
 	async function handleLogout() {
 		await fetch('/api/logout', { method: 'POST' });
@@ -71,10 +102,10 @@
 
 		<div class="controls">
 			{#if $isAdmin}
-				<button class="btn" onclick={() => (showEditor = true)}>+ Write</button>
+				<button class="btn" onclick={() => (showEditor = true)}>+ Plant</button>
 				<button class="btn btn-ghost" onclick={handleLogout}>Logout</button>
 			{:else}
-				<button class="btn btn-ghost" onclick={() => (showLogin = true)}>Admin</button>
+				<button class="btn btn-ghost btn-icon" onclick={() => (showLogin = true)} aria-label="Enter the garden"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg></button>
 			{/if}
 		</div>
 	</div>
@@ -82,6 +113,18 @@
 	{#if $entries.length === 0 && !$isAdmin}
 		<div class="empty-state" transition:fade>
 			<p>This garden is waiting for its first flower.</p>
+		</div>
+	{/if}
+
+	{#if $availableMonths.length > 0}
+		<div class="month-picker">
+			<button class="month-arrow" onclick={prevMonth} disabled={!hasPrev} aria-label="Previous month">
+				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+			</button>
+			<span class="month-label">{formatMonth($currentMonth)}</span>
+			<button class="month-arrow" onclick={nextMonth} disabled={!hasNext} aria-label="Next month">
+				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+			</button>
 		</div>
 	{/if}
 </div>
@@ -173,6 +216,12 @@
 	.btn-ghost {
 		background: transparent;
 	}
+	.btn-icon {
+		padding: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
 	.btn-ghost:hover {
 		background: rgba(255, 255, 255, 0.1);
 	}
@@ -232,6 +281,79 @@
 	.welcome.phase-dawn p {
 		color: rgba(100, 60, 30, 0.7);
 		text-shadow: 0 1px 8px rgba(255, 245, 230, 0.4);
+	}
+
+	.month-picker {
+		position: absolute;
+		bottom: 28px;
+		left: 50%;
+		transform: translateX(-50%);
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 8px 16px;
+		border-radius: 12px;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		pointer-events: auto;
+	}
+	.phase-day .month-picker {
+		background: rgba(0, 0, 0, 0.05);
+	}
+	.phase-dawn .month-picker {
+		background: rgba(100, 60, 20, 0.08);
+	}
+
+	.month-label {
+		font-size: 14px;
+		font-weight: 300;
+		letter-spacing: 1px;
+		color: rgba(255, 255, 255, 0.8);
+		min-width: 140px;
+		text-align: center;
+		user-select: none;
+	}
+	.phase-day .month-label {
+		color: rgba(40, 60, 40, 0.65);
+	}
+	.phase-dawn .month-label {
+		color: rgba(100, 60, 30, 0.7);
+	}
+
+	.month-arrow {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 4px;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: rgba(255, 255, 255, 0.6);
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s, color 0.2s;
+	}
+	.month-arrow:hover:not(:disabled) {
+		background: rgba(255, 255, 255, 0.15);
+		color: rgba(255, 255, 255, 0.9);
+	}
+	.month-arrow:disabled {
+		opacity: 0.25;
+		cursor: default;
+	}
+	.phase-day .month-arrow {
+		color: rgba(40, 60, 40, 0.5);
+	}
+	.phase-day .month-arrow:hover:not(:disabled) {
+		background: rgba(0, 0, 0, 0.06);
+		color: rgba(40, 60, 40, 0.8);
+	}
+	.phase-dawn .month-arrow {
+		color: rgba(100, 60, 30, 0.5);
+	}
+	.phase-dawn .month-arrow:hover:not(:disabled) {
+		background: rgba(100, 60, 20, 0.1);
+		color: rgba(100, 60, 30, 0.8);
 	}
 
 	.editor-overlay {
