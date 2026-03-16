@@ -37,7 +37,9 @@
       "Bash(npm ls:*)",
       "Bash(node -e \"const pixi = require\\(''pixi.js''\\); console.log\\(Object.keys\\(pixi\\).filter\\(k => k.includes\\(''uffer''\\) || k.includes\\(''Source''\\) || k.includes\\(''Texture''\\)\\).sort\\(\\).join\\(''\\\\n''\\)\\)\")",
       "Bash(npm run:*)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5175/)",
+      "Bash(curl -s http://localhost:5175/)"
     ]
   }
 }

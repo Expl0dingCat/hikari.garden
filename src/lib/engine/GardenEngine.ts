@@ -97,6 +97,8 @@ export class GardenEngine {
 		this.world.sortableChildren = true;
 		this.world.addChild(this.grass.container);
 		this.grass.container.zIndex = -10000;
+		this.world.addChild(this.midnightBloom.container);
+		this.midnightBloom.container.zIndex = 4000;
 		this.world.addChild(this.idleVisitors.container);
 		this.idleVisitors.container.zIndex = 5000;
 		this.world.addChild(this.particles.container);
@@ -111,10 +113,11 @@ export class GardenEngine {
 
 		this.updateTheme();
 
-		// Konami code → petal rain
+		// Konami code → petal rain + midnight bloom
 		this.konamiCode = new KonamiCode(() => {
 			this.petalRain.setScreenSize(this.app.screen.width, this.app.screen.height);
 			this.petalRain.trigger(this.flowers);
+			this.midnightBloom.trigger(10);
 		});
 
 		// Fetch and apply current weather
@@ -326,7 +329,7 @@ export class GardenEngine {
 
 		// Easter egg systems
 		this.idleVisitors.update(dt, this.flowers);
-		this.midnightBloom.update(dt, this.flowers);
+		this.midnightBloom.update(dt);
 		this.titleWave.update(dt, this.flowers);
 
 		const screenW = this.app.screen.width;
@@ -433,6 +436,7 @@ export class GardenEngine {
 		this.weather.destroy();
 		this.shootingStars.destroy();
 		this.petalRain.destroy();
+		this.midnightBloom.destroy();
 		this.idleVisitors.destroy();
 		this.app.destroy(true);
 	}
