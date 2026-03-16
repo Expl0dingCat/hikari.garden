@@ -39,6 +39,9 @@ export class FlowerSprite {
 	private sparkles: Sparkle[] = [];
 	private sparkleAlpha = 0;
 
+	/** Temporary scale multiplier used by MidnightBloom and TitleWave effects */
+	bloomScale = 1;
+
 	// Bounds for manual hit testing (in world space, set after positioning)
 	worldX = 0;
 	worldY = 0;
@@ -202,7 +205,7 @@ export class FlowerSprite {
 
 		// Breathing
 		const breathe = 1 + Math.sin(time * 0.5 + this.entry.flowerSeed * 0.7) * 0.018;
-		this.container.scale.set(this.hoverScale * breathe);
+		this.container.scale.set(this.hoverScale * breathe * this.bloomScale);
 
 		// Sway
 		const swayAmount = 0.02 * (1 - this.dna.stemCurve * 0.5);

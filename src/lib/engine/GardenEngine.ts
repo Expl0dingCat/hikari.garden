@@ -8,6 +8,12 @@ import { Camera } from './Camera.js';
 import { getBlendedTheme, type TimeTheme } from './TimeOfDay.js';
 import { generateCursors, type CursorSet } from './Cursors.js';
 import { WeatherSystem, fetchWeatherCondition } from './WeatherSystem.js';
+import { ShootingStars } from './ShootingStars.js';
+import { KonamiCode } from './KonamiCode.js';
+import { PetalRain } from './PetalRain.js';
+import { MidnightBloom } from './MidnightBloom.js';
+import { TitleWave } from './TitleWave.js';
+import { IdleVisitors } from './IdleVisitors.js';
 import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 
 export class GardenEngine {
@@ -28,6 +34,12 @@ export class GardenEngine {
 	private growInTimer = 0;
 	private shrinkOutActive = false;
 	private pendingEntries: JournalEntry[] | null = null;
+	private shootingStars: ShootingStars;
+	private konamiCode!: KonamiCode;
+	private petalRain: PetalRain;
+	private midnightBloom: MidnightBloom;
+	private titleWave: TitleWave;
+	private idleVisitors: IdleVisitors;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
 
@@ -43,6 +55,11 @@ export class GardenEngine {
 		this.particles = new ParticleSystem();
 		this.grass = new GrassSystem();
 		this.weather = new WeatherSystem();
+		this.shootingStars = new ShootingStars();
+		this.petalRain = new PetalRain();
+		this.midnightBloom = new MidnightBloom();
+		this.titleWave = new TitleWave();
+		this.idleVisitors = new IdleVisitors();
 		this.theme = getBlendedTheme();
 		this.camera = null!;
 	}
@@ -70,14 +87,18 @@ export class GardenEngine {
 		cursorDefault.set(this.cursors.default);
 		cursorPointer.set(this.cursors.pointer);
 
-		// Scene graph: background -> world (grass, flowers, particles) -> weather overlay
+		// Scene graph: background -> world (grass, flowers, idleVisitors, particles) -> shootingStars -> petalRain -> weather
 		this.app.stage.addChild(this.background);
 		this.app.stage.addChild(this.world);
+		this.app.stage.addChild(this.shootingStars.gfx);
+		this.app.stage.addChild(this.petalRain.gfx);
 		this.app.stage.addChild(this.weather.container);
 
 		this.world.sortableChildren = true;
 		this.world.addChild(this.grass.container);
 		this.grass.container.zIndex = -10000;
+		this.world.addChild(this.idleVisitors.container);
+		this.idleVisitors.container.zIndex = 5000;
 		this.world.addChild(this.particles.container);
 		this.particles.container.zIndex = 10000;
 
@@ -89,6 +110,12 @@ export class GardenEngine {
 		this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
 
 		this.updateTheme();
+
+		// Konami code → petal rain
+		this.konamiCode = new KonamiCode(() => {
+			this.petalRain.setScreenSize(this.app.screen.width, this.app.screen.height);
+			this.petalRain.trigger(this.flowers);
+		});
 
 		// Fetch and apply current weather
 		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
@@ -117,6 +144,7 @@ export class GardenEngine {
 	}
 
 	private handleClick = (e: MouseEvent) => {
+		this.idleVisitors.resetIdle();
 		if (this.camera.wasDrag()) return;
 
 		const world = this.screenToWorld(e.clientX, e.clientY);
@@ -133,6 +161,7 @@ export class GardenEngine {
 	private lastHoveredEntry: JournalEntry | null = null;
 
 	private handleHover = (e: PointerEvent) => {
+		this.idleVisitors.resetIdle();
 		const world = this.screenToWorld(e.clientX, e.clientY);
 
 		// Find only the top-most hit flower
@@ -180,6 +209,9 @@ export class GardenEngine {
 
 		// Cancel any ongoing grow-in
 		this.growInActive = false;
+
+		// Scatter any idle visitors
+		this.idleVisitors.resetIdle();
 
 		// Stagger shrink from outside-in (outermost flowers shrink first)
 		const n = this.flowers.length;
@@ -292,6 +324,18 @@ export class GardenEngine {
 			flower.update(dt);
 		}
 
+		// Easter egg systems
+		this.idleVisitors.update(dt, this.flowers);
+		this.midnightBloom.update(dt, this.flowers);
+		this.titleWave.update(dt, this.flowers);
+
+		const screenW = this.app.screen.width;
+		const screenH = this.app.screen.height;
+		this.shootingStars.setScreenSize(screenW, screenH);
+		this.shootingStars.update(dt);
+		this.petalRain.setScreenSize(screenW, screenH);
+		this.petalRain.update(dt);
+
 		const vw = this.app.screen.width / this.camera.zoom;
 		const vh = this.app.screen.height / this.camera.zoom;
 		const viewBounds = {
@@ -369,6 +413,11 @@ export class GardenEngine {
 
 	}
 
+	triggerTitleWave() {
+		if (this.growInActive || this.shrinkOutActive) return;
+		this.titleWave.trigger(this.flowers);
+	}
+
 	resize() {
 		this.app.resize();
 	}
@@ -377,10 +426,14 @@ export class GardenEngine {
 		this.canvas.removeEventListener('click', this.handleClick);
 		this.canvas.removeEventListener('pointermove', this.handleHover);
 		this.camera.destroy();
+		this.konamiCode.destroy();
 		for (const f of this.flowers) f.destroy();
 		this.grass.destroy();
 		this.particles.destroy();
 		this.weather.destroy();
+		this.shootingStars.destroy();
+		this.petalRain.destroy();
+		this.idleVisitors.destroy();
 		this.app.destroy(true);
 	}
 }

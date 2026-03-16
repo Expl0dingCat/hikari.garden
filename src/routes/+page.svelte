@@ -3,7 +3,8 @@
 	import FlowerReveal from '$lib/components/FlowerReveal.svelte';
 	import JournalEditor from '$lib/components/JournalEditor.svelte';
 	import LoginDialog from '$lib/components/LoginDialog.svelte';
-	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries } from '$lib/stores/garden.js';
+	import GardenStats from '$lib/components/GardenStats.svelte';
+	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries, titleWaveTrigger } from '$lib/stores/garden.js';
 	import { getTimePhase, getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
@@ -20,6 +21,19 @@
 	let showLogin = $state(false);
 	let showEditor = $state(false);
 	let showWelcome = $state(true);
+	let showStats = $state(false);
+
+	// Title wave easter egg — track rapid clicks on site name
+	let titleClicks: number[] = [];
+	function handleTitleClick() {
+		const now = Date.now();
+		titleClicks.push(now);
+		titleClicks = titleClicks.filter((t) => now - t < 2000);
+		if (titleClicks.length >= 5) {
+			titleClicks = [];
+			titleWaveTrigger.update((n) => n + 1);
+		}
+	}
 
 	$effect(() => {
 		const timer = setTimeout(() => {
@@ -98,9 +112,14 @@
 <!-- Floating UI -->
 <div class="ui-overlay phase-{phase}" style="--cursor-pointer:{$cursorPointer}">
 	<div class="top-bar">
-		<h1 class="site-name">hikari.garden</h1>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<h1 class="site-name" onclick={handleTitleClick}>hikari.garden</h1>
 
 		<div class="controls">
+			{#if $entries.length > 0}
+				<button class="btn btn-ghost btn-icon" onclick={() => (showStats = true)} aria-label="Garden stats"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg></button>
+			{/if}
 			{#if $isAdmin}
 				<button class="btn" onclick={() => (showEditor = true)}>+ Plant</button>
 				<button class="btn btn-ghost" onclick={handleLogout}>Logout</button>
@@ -128,6 +147,10 @@
 		</div>
 	{/if}
 </div>
+
+{#if showStats}
+	<GardenStats entries={$entries} onclose={() => (showStats = false)} />
+{/if}
 
 {#if showLogin}
 	<LoginDialog onclose={() => (showLogin = false)} />

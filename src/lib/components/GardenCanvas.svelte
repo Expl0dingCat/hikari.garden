@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { GardenEngine } from '$lib/engine/GardenEngine.js';
-	import { monthEntries, selectedFlower, currentMonth, availableMonths } from '$lib/stores/garden.js';
+	import { monthEntries, selectedFlower, currentMonth, availableMonths, titleWaveTrigger } from '$lib/stores/garden.js';
 	import type { JournalEntry } from '$lib/types.js';
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
 	let unsub: (() => void) | null = null;
+	let unsubWave: (() => void) | null = null;
 	let handleResize: (() => void) | null = null;
 
 	let tooltipEntry = $state<JournalEntry | null>(null);
@@ -48,6 +49,15 @@
 				latestPin = pos;
 			};
 
+			// Title wave easter egg
+			let waveCount = 0;
+			unsubWave = titleWaveTrigger.subscribe((n) => {
+				if (n > waveCount) {
+					waveCount = n;
+					engine.triggerTitleWave();
+				}
+			});
+
 			// Wait one frame so the WebGL context is fully ready before loading textures
 			requestAnimationFrame(() => {
 				unsub = monthEntries.subscribe((e) => {
@@ -80,6 +90,7 @@
 		return () => {
 			window.removeEventListener('resize', handleResize!);
 			unsub?.();
+			unsubWave?.();
 		};
 	});
 

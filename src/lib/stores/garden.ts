@@ -24,3 +24,6 @@ export const availableMonths = derived(entries, ($entries) => {
 /** Custom cursor CSS values, set by GardenEngine after init */
 export const cursorDefault = writable<string>('');
 export const cursorPointer = writable<string>('');
+
+/** Increment to trigger title wave easter egg */
+export const titleWaveTrigger = writable(0);
