@@ -1,8 +1,20 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { getEntryById, updateEntry, deleteEntry } from '$lib/server/entries.js';
+import { getEntryById, updateEntry, deleteEntry, smellFlower } from '$lib/server/entries.js';
 import { generateFlowerName } from '$lib/generation/NameGenerator.js';
 import { hashString } from '$lib/generation/SeededRandom.js';
+
+export const POST: RequestHandler = async ({ params, request }) => {
+	const body = await request.json();
+	if (body.action === 'smell') {
+		const smells = smellFlower(params.id);
+		if (smells === null) {
+			return json({ error: 'Not found' }, { status: 404 });
+		}
+		return json({ smells });
+	}
+	return json({ error: 'Unknown action' }, { status: 400 });
+};
 
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.isAdmin) {

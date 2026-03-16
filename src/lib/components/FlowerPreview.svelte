@@ -91,7 +91,7 @@
 	}
 
 	.name {
-		font-size: 13px;
+		font-size: 16px;
 		font-weight: 300;
 		letter-spacing: 1px;
 		color: var(--ui-text-soft, rgba(0,0,0,0.6));

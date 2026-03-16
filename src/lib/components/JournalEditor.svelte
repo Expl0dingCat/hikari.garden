@@ -320,7 +320,8 @@
 	.card-body {
 		display: flex;
 		gap: 28px;
-		align-items: flex-start;
+		align-items: stretch;
+		min-height: 460px;
 	}
 
 	@media (max-width: 700px) {
@@ -344,9 +345,11 @@
 	.preview-section {
 		display: flex;
 		justify-content: center;
+		align-items: center;
 		padding: 10px 8px 6px;
 		background: var(--ui-bar-bg);
 		border-radius: 14px;
+		min-height: 240px;
 	}
 
 	.mood-section {
@@ -374,7 +377,8 @@
 		color: var(--ui-text);
 		resize: vertical;
 		outline: none;
-		min-height: 180px;
+		min-height: 120px;
+		flex: 1;
 		transition: border-color 0.2s;
 	}
 	.journal-textarea:focus {

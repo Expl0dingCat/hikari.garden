@@ -19,6 +19,7 @@ interface EntryRow {
 	weather: string | null;
 	images: string | null;
 	song: string | null;
+	smells: number;
 }
 
 function rowToEntry(row: EntryRow): JournalEntry {
@@ -41,7 +42,8 @@ function rowToEntry(row: EntryRow): JournalEntry {
 		tags: row.tags ? JSON.parse(row.tags) : undefined,
 		weather: row.weather ? JSON.parse(row.weather) : undefined,
 		images: row.images ? JSON.parse(row.images) : undefined,
-		song: row.song ? JSON.parse(row.song) : undefined
+		song: row.song ? JSON.parse(row.song) : undefined,
+		smells: row.smells || 0
 	};
 }
 
@@ -67,7 +69,8 @@ const stmts = {
 			song = @song
 		WHERE id = @id
 	`),
-	delete: db.prepare('DELETE FROM entries WHERE id = ?')
+	delete: db.prepare('DELETE FROM entries WHERE id = ?'),
+	smell: db.prepare('UPDATE entries SET smells = smells + 1 WHERE id = ? RETURNING smells')
 };
 
 export function getAllEntries(): JournalEntry[] {
@@ -119,4 +122,9 @@ export function updateEntry(entry: JournalEntry): JournalEntry {
 export function deleteEntry(id: string): boolean {
 	const result = stmts.delete.run(id);
 	return result.changes > 0;
+}
+
+export function smellFlower(id: string): number | null {
+	const row = stmts.smell.get(id) as { smells: number } | undefined;
+	return row ? row.smells : null;
 }

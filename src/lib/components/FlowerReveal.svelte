@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedFlower, cursorDefault, cursorPointer } from '$lib/stores/garden.js';
+	import { selectedFlower, entries, cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 	import { fade, fly } from 'svelte/transition';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
@@ -18,6 +18,11 @@
 	let glowTop = $state('40%');
 	let revealTimer: ReturnType<typeof setTimeout> | null = null;
 	let showTags = $state(false);
+	let smellCount = $state(0);
+	let smelled = $state(false);
+	let smelling = $state(false);
+	let smellToast = $state<string | null>(null);
+	let smellToastTimer: ReturnType<typeof setTimeout> | null = null;
 	let lightboxOpen = $state(false);
 	let lightboxIndex = $state(0);
 	let flowerCanvas: HTMLCanvasElement;
@@ -122,6 +127,10 @@
 
 			displayedText = '';
 			showTags = false;
+			smellCount = currentEntry.smells || 0;
+			smelled = false;
+			smellToast = null;
+			if (smellToastTimer) clearTimeout(smellToastTimer);
 			revealTimer = setTimeout(() => {
 				displayedText = currentEntry.text;
 				setTimeout(() => { showTags = true; }, 500);
@@ -131,6 +140,58 @@
 			if (revealTimer) clearTimeout(revealTimer);
 		};
 	});
+
+	function generateScent(mood: import('$lib/types.js').MoodVector): string {
+		const scents: { check: () => boolean; words: string[] }[] = [
+			{ check: () => mood.joy > 0.7, words: ['warm honey', 'sun-ripened peaches', 'sweet citrus', 'fresh buttercream', 'golden nectar'] },
+			{ check: () => mood.joy < 0.3, words: ['damp earth after rain', 'old paper', 'cold stone', 'dried lavender', 'faint smoke'] },
+			{ check: () => mood.energy > 0.7, words: ['crushed ginger', 'black pepper', 'wild mint', 'fresh pine', 'bright lemongrass'] },
+			{ check: () => mood.energy < 0.3, words: ['chamomile tea', 'soft vanilla', 'warm milk', 'cotton sheets', 'distant jasmine'] },
+			{ check: () => mood.tenderness > 0.7, words: ['rose petals', 'cherry blossoms', 'sweet pea', 'soft peony', 'warm skin'] },
+			{ check: () => mood.tenderness < 0.3, words: ['cedar bark', 'iron filings', 'cold metal', 'morning frost', 'dry sage'] },
+			{ check: () => mood.clarity > 0.7, words: ['eucalyptus', 'fresh snow', 'clean linen', 'sea glass', 'crystal water'] },
+			{ check: () => mood.clarity < 0.3, words: ['incense smoke', 'old perfume', 'fog and moss', 'distant campfire', 'wet wool'] },
+			{ check: () => mood.hope > 0.7, words: ['spring rain', 'new leaves', 'morning dew', 'fresh-cut grass', 'warm bread'] },
+			{ check: () => mood.hope < 0.3, words: ['autumn leaves', 'dried roses', 'candle wax', 'dusty velvet', 'cold tea'] },
+		];
+		const matching = scents.filter((s) => s.check());
+		if (matching.length === 0) matching.push(scents[0]);
+		const pool = matching[Math.floor(Math.random() * matching.length)];
+		return pool.words[Math.floor(Math.random() * pool.words.length)];
+	}
+
+	async function handleSmell() {
+		if (!entry) return;
+		if (smelled) {
+			smellToast = `you already smelled this flower!`;
+			if (smellToastTimer) clearTimeout(smellToastTimer);
+			smellToastTimer = setTimeout(() => { smellToast = null; }, 3000);
+			return;
+		}
+		if (smelling) return;
+		smelling = true;
+		try {
+			const res = await fetch(`/api/entries/${entry.id}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'smell' })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				smellCount = data.smells;
+				smelled = true;
+				entries.update((all) =>
+					all.map((e) => (e.id === entry!.id ? { ...e, smells: data.smells } : e))
+				);
+				// Show toast
+				const scent = generateScent(entry!.mood);
+				smellToast = `you smelled ${entry!.flowerName} — it smells like ${scent}`;
+				if (smellToastTimer) clearTimeout(smellToastTimer);
+				smellToastTimer = setTimeout(() => { smellToast = null; }, 4000);
+			}
+		} catch {}
+		smelling = false;
+	}
 
 	function close() {
 		selectedFlower.set(null);
@@ -204,6 +265,12 @@
 		<div class="reveal-card" transition:fly={{ y: 30, duration: 400 }} onclick={(e) => e.stopPropagation()}>
 			<div class="top-bar">
 				<span class="top-date">{formatDateLine(entry.date)}</span>
+				<button class="smell-btn" class:smelled onclick={handleSmell} disabled={smelling}>
+					<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 20c-4 0-7-2.5-7-6 0-4 3-6 5-9 .4-.6 1.2-.6 1.6-.1l.4.5c2 3 5 5 5 8.6 0 3.5-3 6-5 6z"/>
+					</svg>
+					<span class="smell-count">{smellCount}</span>
+				</button>
 				<div class="top-meta">
 					{#if relativeDate(entry.date)}
 						<span class="meta-tag">{relativeDate(entry.date)}</span>
@@ -301,6 +368,12 @@
 		</div>
 	</div>
 
+	{#if smellToast}
+		<div class="smell-toast" transition:fly={{ y: 20, duration: 300 }}>
+			{smellToast}
+		</div>
+	{/if}
+
 	{#if lightboxOpen && entry?.images}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -344,17 +417,25 @@
 	.top-bar {
 		display: flex;
 		align-items: center;
-		gap: 16px;
+		gap: 10px;
 		margin-bottom: 20px;
 		padding-bottom: 14px;
 		border-bottom: 1px solid var(--ui-divider);
+		min-width: 0;
+		overflow: hidden;
 	}
 
 	.top-meta {
 		display: flex;
 		align-items: center;
 		gap: 6px;
-		flex-wrap: wrap;
+		flex-shrink: 1;
+		min-width: 0;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.top-meta::-webkit-scrollbar {
+		display: none;
 	}
 
 	.top-date {
@@ -362,6 +443,8 @@
 		color: var(--ui-text-soft, var(--ui-text-muted));
 		letter-spacing: 0.3px;
 		margin-right: auto;
+		white-space: nowrap;
+		flex-shrink: 0;
 	}
 
 	.meta-tag {
@@ -459,6 +542,67 @@
 		text-align: center;
 		color: var(--ui-text);
 		margin-bottom: 14px;
+	}
+
+	.smell-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 3px 9px;
+		border-radius: 6px;
+		border: none;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		color: rgba(255, 255, 255, 0.7);
+		font-family: inherit;
+		font-size: 12px;
+		line-height: 1;
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s, color 0.2s, transform 0.15s;
+		white-space: nowrap;
+		letter-spacing: 0.3px;
+		flex-shrink: 0;
+	}
+	.smell-btn :global(svg) {
+		display: block;
+	}
+	.smell-btn:hover:not(:disabled) {
+		background: var(--ui-divider);
+		color: rgba(255, 255, 255, 0.9);
+	}
+	.smell-btn:active:not(:disabled) {
+		transform: scale(0.95);
+	}
+	.smell-btn.smelled {
+		color: rgba(255, 255, 255, 0.9);
+		cursor: default;
+	}
+	.smell-btn:disabled:not(.smelled) {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.smell-count {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.smell-toast {
+		position: fixed;
+		bottom: 32px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 150;
+		padding: 10px 22px;
+		border-radius: 12px;
+		background: var(--ui-card, rgba(20, 20, 30, 0.95));
+		border: 1px solid var(--ui-card-border, rgba(255,255,255,0.1));
+		color: var(--ui-text-soft, rgba(255,255,255,0.8));
+		font-size: 13px;
+		letter-spacing: 0.3px;
+		white-space: nowrap;
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		box-shadow: var(--ui-shadow);
+		pointer-events: none;
 	}
 
 	.mood-bars {

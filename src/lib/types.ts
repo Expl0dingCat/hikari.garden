@@ -34,6 +34,7 @@ export interface JournalEntry {
 	weather?: Weather;
 	images?: string[];
 	song?: Song;
+	smells: number;
 }
 
 export type PetalShapeId =

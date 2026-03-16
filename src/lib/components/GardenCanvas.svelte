@@ -16,6 +16,8 @@
 	let todayPins = $state<{ entry: JournalEntry; x: number; y: number }[]>([]);
 	let latestPin = $state<{ entry: JournalEntry; x: number; y: number } | null>(null);
 
+	let loadedIds: string = '';
+
 	function formatTooltipDate(dateStr: string): string {
 		const d = new Date(dateStr + 'T00:00:00');
 		return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -45,7 +47,20 @@
 			// Wait one frame so the WebGL context is fully ready before loading textures
 			requestAnimationFrame(() => {
 				unsub = entries.subscribe((e) => {
-					engine.loadEntries(e);
+					const newIds = e.map((x) => x.id).join(',');
+					if (newIds === loadedIds) {
+						// Only data changed (e.g. smell count), update entry refs without re-rendering
+						engine.updateEntryData(e);
+						return;
+					}
+					const isAdd = loadedIds.length > 0 && e.length > 0 && newIds.startsWith(loadedIds);
+					loadedIds = newIds;
+					if (isAdd) {
+						// New flower added — reload without grow-in, recenter to latest
+						engine.loadEntries(e, true);
+					} else {
+						engine.loadEntries(e);
+					}
 				});
 			});
 		});

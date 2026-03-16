@@ -41,5 +41,8 @@ if (!colNames.includes('images')) {
 if (!colNames.includes('song')) {
 	db.exec("ALTER TABLE entries ADD COLUMN song TEXT");
 }
+if (!colNames.includes('smells')) {
+	db.exec("ALTER TABLE entries ADD COLUMN smells INTEGER NOT NULL DEFAULT 0");
+}
 
 export default db;

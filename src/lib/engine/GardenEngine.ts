@@ -147,7 +147,16 @@ export class GardenEngine {
 		}
 	};
 
-	loadEntries(entries: JournalEntry[]) {
+	/** Update entry data references without re-rendering (e.g. smell count changes) */
+	updateEntryData(entries: JournalEntry[]) {
+		const byId = new Map(entries.map((e) => [e.id, e]));
+		for (const flower of this.flowers) {
+			const updated = byId.get(flower.entry.id);
+			if (updated) flower.entry = updated;
+		}
+	}
+
+	loadEntries(entries: JournalEntry[], skipGrowIn = false) {
 		for (const f of this.flowers) f.destroy();
 		this.flowers = [];
 
@@ -161,16 +170,25 @@ export class GardenEngine {
 			sorted.map((e) => e.date)
 		);
 
-		// Calculate stagger delay per flower (center-out grow-in)
-		const totalGrowDuration = Math.min(sorted.length * 0.06, 3); // cap at 3s
-		for (let i = 0; i < sorted.length; i++) {
-			const flower = new FlowerSprite(sorted[i]);
-			flower.setPosition(positions[i].x, positions[i].y);
-			// Stagger: earliest flower (center) grows first, newest (edge) last
-			const delay = (i / Math.max(1, sorted.length - 1)) * totalGrowDuration;
-			flower.setGrowIn(delay);
-			this.world.addChild(flower.container);
-			this.flowers.push(flower);
+		if (skipGrowIn) {
+			// No grow-in animation — place all flowers fully grown
+			for (let i = 0; i < sorted.length; i++) {
+				const flower = new FlowerSprite(sorted[i]);
+				flower.setPosition(positions[i].x, positions[i].y);
+				this.world.addChild(flower.container);
+				this.flowers.push(flower);
+			}
+		} else {
+			// Calculate stagger delay per flower (center-out grow-in)
+			const totalGrowDuration = Math.min(sorted.length * 0.06, 3); // cap at 3s
+			for (let i = 0; i < sorted.length; i++) {
+				const flower = new FlowerSprite(sorted[i]);
+				flower.setPosition(positions[i].x, positions[i].y);
+				const delay = (i / Math.max(1, sorted.length - 1)) * totalGrowDuration;
+				flower.setGrowIn(delay);
+				this.world.addChild(flower.container);
+				this.flowers.push(flower);
+			}
 		}
 
 		// Force all flower texture sources to upload to the GPU
@@ -187,13 +205,21 @@ export class GardenEngine {
 		const bounds = getGardenBounds(positions);
 		this.grass.generate(bounds, positions);
 
-		// Start camera at center (0,0) during grow-in, then pan to newest
-		this.camera.focusOn(0, 0, 0.8);
-		this.camera.x = 0;
-		this.camera.y = 0;
-		this.camera.zoom = 0.8;
-		this.growInActive = true;
-		this.growInTimer = 0;
+		if (skipGrowIn) {
+			// Just pan to the newest flower
+			this.growInActive = false;
+			if (this.latestFlower) {
+				this.camera.focusOn(this.latestFlower.worldX, this.latestFlower.worldY, 1.2);
+			}
+		} else {
+			// Start camera at center (0,0) during grow-in, then pan to newest
+			this.camera.focusOn(0, 0, 0.8);
+			this.camera.x = 0;
+			this.camera.y = 0;
+			this.camera.zoom = 0.8;
+			this.growInActive = true;
+			this.growInTimer = 0;
+		}
 
 		this.particles.setBounds(
 			this.app.screen.width / this.camera.zoom,
