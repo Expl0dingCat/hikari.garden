@@ -7,6 +7,7 @@ import { calculateSpiralPositions, getGardenBounds } from './SpiralLayout.js';
 import { Camera } from './Camera.js';
 import { getBlendedTheme, type TimeTheme } from './TimeOfDay.js';
 import { generateCursors, type CursorSet } from './Cursors.js';
+import { WeatherSystem, fetchWeatherCondition } from './WeatherSystem.js';
 import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 
 export class GardenEngine {
@@ -15,6 +16,7 @@ export class GardenEngine {
 	private flowers: FlowerSprite[] = [];
 	private particles: ParticleSystem;
 	private grass: GrassSystem;
+	private weather: WeatherSystem;
 	private camera: Camera;
 	private background: Graphics;
 	private theme: TimeTheme;
@@ -40,6 +42,7 @@ export class GardenEngine {
 		this.background = new Graphics();
 		this.particles = new ParticleSystem();
 		this.grass = new GrassSystem();
+		this.weather = new WeatherSystem();
 		this.theme = getBlendedTheme();
 		this.camera = null!;
 	}
@@ -67,9 +70,10 @@ export class GardenEngine {
 		cursorDefault.set(this.cursors.default);
 		cursorPointer.set(this.cursors.pointer);
 
-		// Scene graph: background -> grass -> particles -> flowers
+		// Scene graph: background -> world (grass, flowers, particles) -> weather overlay
 		this.app.stage.addChild(this.background);
 		this.app.stage.addChild(this.world);
+		this.app.stage.addChild(this.weather.container);
 
 		this.world.sortableChildren = true;
 		this.world.addChild(this.grass.container);
@@ -85,6 +89,12 @@ export class GardenEngine {
 		this.app.ticker.add((ticker) => this.update(ticker.deltaTime));
 
 		this.updateTheme();
+
+		// Fetch and apply current weather
+		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
+		fetchWeatherCondition().then((condition) => {
+			this.weather.setCondition(condition);
+		});
 	}
 
 	private screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -239,10 +249,12 @@ export class GardenEngine {
 		this.todayFlowers = this.flowers.filter((f) => f.entry.date === this.todayStr);
 		this.latestFlower = this.flowers.length > 0 ? this.flowers[this.flowers.length - 1] : null;
 
-		// Generate grass across the garden
-		const bounds = getGardenBounds(positions);
-		this.grass.container.alpha = 1;
-		this.grass.generate(bounds, positions);
+		// Generate grass across the garden (skip when just adding a flower)
+		if (!skipGrowIn) {
+			const bounds = getGardenBounds(positions);
+			this.grass.container.alpha = 1;
+			this.grass.generate(bounds, positions);
+		}
 
 		if (skipGrowIn) {
 			// Just pan to the newest flower
@@ -290,6 +302,8 @@ export class GardenEngine {
 		};
 		this.grass.update(dt, this.camera.zoom, viewBounds);
 		this.particles.update(dt);
+		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
+		this.weather.update(dt);
 
 		// Shrink-out → wait for flowers + grass to finish, then load pending entries
 		if (this.shrinkOutActive) {
@@ -366,6 +380,7 @@ export class GardenEngine {
 		for (const f of this.flowers) f.destroy();
 		this.grass.destroy();
 		this.particles.destroy();
+		this.weather.destroy();
 		this.app.destroy(true);
 	}
 }

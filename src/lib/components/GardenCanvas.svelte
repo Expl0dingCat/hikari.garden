@@ -3,7 +3,6 @@
 	import { GardenEngine } from '$lib/engine/GardenEngine.js';
 	import { monthEntries, selectedFlower, currentMonth, availableMonths } from '$lib/stores/garden.js';
 	import type { JournalEntry } from '$lib/types.js';
-
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
 	let unsub: (() => void) | null = null;
