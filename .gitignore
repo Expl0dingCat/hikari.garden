@@ -26,3 +26,5 @@ vite.config.ts.timestamp-*
 data/*.db
 data/*.db-wal
 data/*.db-shm
+
+.claude
