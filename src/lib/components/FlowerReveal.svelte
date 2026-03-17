@@ -5,6 +5,7 @@
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
 	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { marked } from 'marked';
+	import { mulberry32 } from '$lib/generation/SeededRandom.js';
 	import { env } from '$env/dynamic/public';
 
 	const OWNER_TZ = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
@@ -146,29 +147,87 @@
 		};
 	});
 
-	function generateScent(mood: import('$lib/types.js').MoodVector): string {
+	function generateScent(mood: import('$lib/types.js').MoodVector, seed: number): string {
+		const rng = mulberry32(seed + 9999);
 		const scents: { check: () => boolean; words: string[] }[] = [
-			{ check: () => mood.joy > 0.7, words: ['warm honey', 'sun-ripened peaches', 'sweet citrus', 'fresh buttercream', 'golden nectar'] },
-			{ check: () => mood.joy < 0.3, words: ['damp earth after rain', 'old paper', 'cold stone', 'dried lavender', 'faint smoke'] },
-			{ check: () => mood.energy > 0.7, words: ['crushed ginger', 'black pepper', 'wild mint', 'fresh pine', 'bright lemongrass'] },
-			{ check: () => mood.energy < 0.3, words: ['chamomile tea', 'soft vanilla', 'warm milk', 'cotton sheets', 'distant jasmine'] },
-			{ check: () => mood.tenderness > 0.7, words: ['rose petals', 'cherry blossoms', 'sweet pea', 'soft peony', 'warm skin'] },
-			{ check: () => mood.tenderness < 0.3, words: ['cedar bark', 'iron filings', 'cold metal', 'morning frost', 'dry sage'] },
-			{ check: () => mood.clarity > 0.7, words: ['eucalyptus', 'fresh snow', 'clean linen', 'sea glass', 'crystal water'] },
-			{ check: () => mood.clarity < 0.3, words: ['incense smoke', 'old perfume', 'fog and moss', 'distant campfire', 'wet wool'] },
-			{ check: () => mood.hope > 0.7, words: ['spring rain', 'new leaves', 'morning dew', 'fresh-cut grass', 'warm bread'] },
-			{ check: () => mood.hope < 0.3, words: ['autumn leaves', 'dried roses', 'candle wax', 'dusty velvet', 'cold tea'] },
+			{ check: () => mood.joy > 0.7, words: [
+				'warm honey', 'sun-ripened peaches', 'sweet citrus', 'fresh buttercream', 'golden nectar',
+				'melted caramel', 'ripe mangoes', 'sunflower fields', 'orange blossom', 'toasted marshmallow',
+				'brown sugar', 'apricot jam', 'clementine zest', 'pineapple sorbet', 'candied ginger'
+			]},
+			{ check: () => mood.joy < 0.3, words: [
+				'damp earth after rain', 'old paper', 'cold stone', 'dried lavender', 'faint smoke',
+				'wet clay', 'forgotten libraries', 'grey mornings', 'rusted iron', 'driftwood',
+				'rain on concrete', 'empty rooms', 'weathered leather', 'cold ash', 'dried ink'
+			]},
+			{ check: () => mood.energy > 0.7, words: [
+				'crushed ginger', 'black pepper', 'wild mint', 'fresh pine', 'bright lemongrass',
+				'cracked cinnamon', 'espresso beans', 'blood orange', 'juniper berries', 'electric ozone',
+				'raw cardamom', 'chili flakes', 'birch sap', 'sharp rosemary', 'thunderstorm air'
+			]},
+			{ check: () => mood.energy < 0.3, words: [
+				'chamomile tea', 'soft vanilla', 'warm milk', 'cotton sheets', 'distant jasmine',
+				'sleepy lavender', 'slow honey', 'fading embers', 'old quilts', 'powdered sugar',
+				'warm rice', 'barely-there musk', 'hushed linen', 'still water', 'drowsy sage'
+			]},
+			{ check: () => mood.tenderness > 0.7, words: [
+				'rose petals', 'cherry blossoms', 'sweet pea', 'soft peony', 'warm skin',
+				'fresh lilac', 'baby powder', 'honeysuckle dew', 'magnolia', 'silk ribbon',
+				'pink peppercorn', 'sugar plum', 'blush wine', 'tender violets', 'cashmere'
+			]},
+			{ check: () => mood.tenderness < 0.3, words: [
+				'cedar bark', 'iron filings', 'cold metal', 'morning frost', 'dry sage',
+				'granite dust', 'frozen pine', 'steel wool', 'bare concrete', 'dry wind',
+				'cracked leather', 'raw flint', 'winter bark', 'slate', 'cold brass'
+			]},
+			{ check: () => mood.clarity > 0.7, words: [
+				'eucalyptus', 'fresh snow', 'clean linen', 'sea glass', 'crystal water',
+				'white tea', 'arctic air', 'cucumber', 'starched cotton', 'clear quartz',
+				'ice melt', 'morning stream', 'mint frost', 'polished glass', 'alpine wind'
+			]},
+			{ check: () => mood.clarity < 0.3, words: [
+				'incense smoke', 'old perfume', 'fog and moss', 'distant campfire', 'wet wool',
+				'amber resin', 'temple wood', 'tobacco leaf', 'twilight mist', 'opium flower',
+				'patchouli', 'dark myrrh', 'smoky quartz', 'faded sandalwood', 'velvet shadows'
+			]},
+			{ check: () => mood.hope > 0.7, words: [
+				'spring rain', 'new leaves', 'morning dew', 'fresh-cut grass', 'warm bread',
+				'first bloom', 'green tea', 'wet soil at dawn', 'apple blossoms', 'open windows',
+				'seedling roots', 'clover honey', 'garden after rain', 'dandelion wisps', 'sunrise mist'
+			]},
+			{ check: () => mood.hope < 0.3, words: [
+				'autumn leaves', 'dried roses', 'candle wax', 'dusty velvet', 'cold tea',
+				'fading ink', 'pressed flowers', 'old photographs', 'burnt sugar', 'empty vases',
+				'November fog', 'forgotten letters', 'melted snow', 'silent rooms', 'moth wings'
+			]},
+			{ check: () => mood.joy > 0.4 && mood.tenderness > 0.4, words: [
+				'strawberry fields', 'warm cinnamon rolls', 'birthday cake', 'sun on bare shoulders',
+				'ripe berries', 'spun sugar', 'tangerine dreams', 'plum blossoms', 'soft caramel'
+			]},
+			{ check: () => mood.energy > 0.4 && mood.clarity > 0.4, words: [
+				'lightning and rain', 'sharp cedar', 'ocean spray', 'mountain summit',
+				'frozen waterfall', 'crisp apple', 'cold river stones', 'snapped twig', 'winter sun'
+			]},
+			{ check: () => mood.hope > 0.4 && mood.joy > 0.4, words: [
+				'wildflower meadow', 'lemon verbena', 'coconut milk', 'peach blossoms',
+				'warm sand', 'jasmine at dusk', 'ripening figs', 'marigold petals', 'sunlit honey'
+			]},
+			{ check: () => mood.tenderness > 0.4 && mood.hope > 0.4, words: [
+				'sleeping gardens', 'moonlit petals', 'lavender dreams', 'warm amber',
+				'soft rain on leaves', 'wisteria', 'lily of the valley', 'sweet almond', 'night-blooming jasmine'
+			]},
 		];
 		const matching = scents.filter((s) => s.check());
 		if (matching.length === 0) matching.push(scents[0]);
-		const pool = matching[Math.floor(Math.random() * matching.length)];
-		return pool.words[Math.floor(Math.random() * pool.words.length)];
+		const pool = matching[Math.floor(rng() * matching.length)];
+		return pool.words[Math.floor(rng() * pool.words.length)];
 	}
 
 	async function handleSmell() {
 		if (!entry) return;
 		if (smelled) {
-			smellToast = `you already smelled this flower!`;
+			const scent = generateScent(entry.mood, entry.flowerSeed);
+			smellToast = `${entry.flowerName} smells like ${scent}`;
 			if (smellToastTimer) clearTimeout(smellToastTimer);
 			smellToastTimer = setTimeout(() => { smellToast = null; }, 3000);
 			return;
@@ -189,7 +248,7 @@
 					all.map((e) => (e.id === entry!.id ? { ...e, smells: data.smells } : e))
 				);
 				// Show toast
-				const scent = generateScent(entry!.mood);
+				const scent = generateScent(entry!.mood, entry!.flowerSeed);
 				smellToast = `you smelled ${entry!.flowerName} — it smells like ${scent}`;
 				if (smellToastTimer) clearTimeout(smellToastTimer);
 				smellToastTimer = setTimeout(() => { smellToast = null; }, 4000);
@@ -618,6 +677,10 @@
 		align-items: center;
 		position: relative;
 		margin-bottom: 8px;
+		border-radius: 12px;
+		overflow: hidden;
+		background: rgba(0, 0, 0, 0.2);
+		padding: 12px;
 	}
 
 	.flower-glow {
@@ -750,13 +813,14 @@
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 150;
-		padding: 10px 22px;
-		border-radius: 12px;
+		padding: 14px 28px;
+		border-radius: 14px;
 		background: var(--ui-card, rgba(20, 20, 30, 0.95));
 		border: 1px solid var(--ui-card-border, rgba(255,255,255,0.1));
 		color: var(--ui-text-soft, rgba(255,255,255,0.8));
-		font-size: 13px;
-		letter-spacing: 0.3px;
+		font-family: 'Darumadrop One', cursive;
+		font-size: 18px;
+		letter-spacing: 0.5px;
 		white-space: nowrap;
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);

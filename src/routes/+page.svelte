@@ -98,8 +98,10 @@
 	}
 
 	let hasStarred = $derived($entries.some((e) => e.isStarred));
+	let monthDir = $state(1);
 
 	function prevMonth() {
+		monthDir = -1;
 		if ($currentMonth === STARRED_MONTH) {
 			const months = $availableMonths;
 			if (months.length > 0) currentMonth.set(months[months.length - 1]);
@@ -111,6 +113,7 @@
 	}
 
 	function nextMonth() {
+		monthDir = 1;
 		if ($currentMonth === STARRED_MONTH) return;
 		const months = $availableMonths;
 		const idx = months.indexOf($currentMonth);
@@ -189,10 +192,14 @@
 				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
 			</button>
 			<span class="month-label">
-			{#if $currentMonth === STARRED_MONTH}
-				<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
-			{/if}
-			{formatMonth($currentMonth)}
+				{#key $currentMonth}
+					<span class="month-text" in:fly={{ x: monthDir * 30, duration: 250, delay: 100 }} out:fly={{ x: monthDir * -30, duration: 150 }}>
+						{#if $currentMonth === STARRED_MONTH}
+							<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+						{/if}
+						{formatMonth($currentMonth)}
+					</span>
+				{/key}
 		</span>
 			<button class="month-arrow" onclick={nextMonth} disabled={!hasNext} aria-label="Next month">
 				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
@@ -458,6 +465,15 @@
 		min-width: 140px;
 		text-align: center;
 		user-select: none;
+		position: relative;
+		overflow: hidden;
+		height: 1.4em;
+	}
+	.month-text {
+		display: inline-block;
+		position: absolute;
+		left: 0;
+		right: 0;
 	}
 	.phase-day .month-label {
 		color: rgba(40, 60, 40, 0.65);
@@ -725,14 +741,23 @@
 
 	@media (max-width: 600px) {
 		.help-card {
-			padding: 10px 10px 20px;
+			padding: 10px 10px 14px;
 			border-radius: 16px;
 		}
+		.help-content {
+			height: 320px;
+		}
 		.help-illustration {
-			height: 160px;
+			height: 150px;
+			margin-bottom: 14px;
 		}
 		.help-title {
 			font-size: 19px;
+			margin-bottom: 8px;
+		}
+		.help-text {
+			font-size: 13px;
+			line-height: 1.6;
 		}
 	}
 </style>
