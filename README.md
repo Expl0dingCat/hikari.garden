@@ -1,25 +1,26 @@
 # hikari.garden
 
-*A garden of feelings, grown one day at a time.*
+*soft things, kept carefully*
 
-Every journal entry plants a flower. Your mood — joy, energy, tenderness, clarity, hope — becomes its DNA: the curve of its petals, the warmth of its colors, the height of its stem. No two flowers are alike. Over time, a garden grows.
+write something. anything. a flower grows.
 
-The garden lives and breathes. It shifts from dawn gold to daylight green to dusky violet to deep night blue as the hours pass. Rain falls when it rains outside. Snow drifts when it snows. Stars streak across the sky after dark, and if you're here at midnight, fireflies come out.
+its shape comes from how you felt, the joy or the fog, the restlessness, the quiet ache of a tuesday. your mood bends its petals, tints its colors, decides how tall it stands. no two are the same. you won't remember making most of them, which is kind of the point.
 
-Click a flower to remember the day it was planted.
+the garden changes with the hours. morning light gives way to afternoon, bleeds into dusk, settles into night. if it's raining where you are, it rains here too. snow, if it's snowing. after dark the stars come out, and at midnight — well. come see for yourself.
+
+click a flower to remember the day it was planted.
+
+[https://github.com/user-attachments/assets/3e59cb7b-daaa-4087-8668-11f8a05cf684](https://github.com/user-attachments/assets/3e59cb7b-daaa-4087-8668-11f8a05cf684)
+
+## hidden things
+
+- type the konami code and petals will rain from the sky
+- click the title five times quickly
+- leave the garden idle and watch who visits
+- come back at midnight
 
 
-https://github.com/user-attachments/assets/3e59cb7b-daaa-4087-8668-11f8a05cf684
-
-
-## Hidden things
-
-- Type the Konami code and petals will rain from the sky
-- Click the title five times quickly
-- Leave the garden idle and watch who visits
-- Come back at midnight
-
-## Growing your own
+## growing your own
 
 ```bash
 git clone https://github.com/Expl0dingCat/hikari.garden.git
@@ -28,32 +29,32 @@ npm install
 cp .env.example .env
 ```
 
-Generate a password to protect your garden:
+generate a password to protect your garden:
 
 ```bash
 node -e "import('bcryptjs').then(b => console.log(b.hashSync('your-password', 12)))"
 ```
 
-Paste the hash into `.env` (escape `$` with `\$`), set your name and timezone, and optionally add Spotify API credentials to attach songs to entries.
+paste the hash into `.env` (escape `$` with `\$`), set your name and timezone, and optionally add Spotify API credentials to attach songs to entries.
 
 ```bash
 npm run dev
 ```
 
-## Built with
+## built with
 
-[SvelteKit](https://svelte.dev) and [PixiJS](https://pixijs.com) for the living canvas. [SQLite](https://github.com/WiseLibs/better-sqlite3) for memory. [Open-Meteo](https://open-meteo.com) for weather. [Spotify Web API](https://developer.spotify.com) for music. Everything runs on a single Node.js server.
+[SvelteKit](https://svelte.dev) and [PixiJS](https://pixijs.com) for the living canvas. [SQLite](https://github.com/WiseLibs/better-sqlite3) for memory. [Open-Meteo](https://open-meteo.com) for weather. [Spotify Web API](https://developer.spotify.com) for music. everything runs on a single Node.js server.
 
-## Deploying
+## deploying
 
 ```bash
 npm run build
 node build
 ```
 
-Listens on port 3000. The `data/` directory holds the database and uploaded images — back it up, that's where the flowers live.
+listens on port 3000. the `data/` directory holds the database and uploaded images — back it up, that's where the flowers live.
 
-## Structure
+## structure
 
 ```
 src/
@@ -69,6 +70,6 @@ src/
 data/                sqlite database and images (gitignored)
 ```
 
-## License
+## license
 
 MIT
