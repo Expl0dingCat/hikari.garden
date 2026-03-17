@@ -477,26 +477,6 @@ export class GardenEngine {
 		}
 	}
 
-	// Debug methods
-	debugRainRipple() {
-		const x = this.app.screen.width / 2 + (Math.random() - 0.5) * 200;
-		const y = this.app.screen.height / 2 + (Math.random() - 0.5) * 200;
-		this.rainRipples.setRaining(true);
-		this.rainRipples.trigger(x, y);
-	}
-
-	debugMilestone() {
-		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
-		(this.milestone as any).burst();
-	}
-
-	debugAnniversary() {
-		if (this.flowers.length > 0) {
-			const f = this.flowers[Math.floor(Math.random() * this.flowers.length)];
-			(this.anniversaryGlow as any).activeFlowers.set(f, 0);
-		}
-	}
-
 	/** Check milestone after planting a new flower */
 	checkMilestone(totalFlowers: number) {
 		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
