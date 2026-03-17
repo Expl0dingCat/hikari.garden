@@ -14,6 +14,11 @@ import { PetalRain } from './PetalRain.js';
 import { MidnightBloom } from './MidnightBloom.js';
 import { TitleWave } from './TitleWave.js';
 import { IdleVisitors } from './IdleVisitors.js';
+import { AnniversaryGlow } from './AnniversaryGlow.js';
+
+import { RainRipples } from './RainRipples.js';
+
+import { MilestoneCelebration } from './MilestoneCelebration.js';
 import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 
 export class GardenEngine {
@@ -41,6 +46,11 @@ export class GardenEngine {
 	private midnightBloom: MidnightBloom;
 	private titleWave: TitleWave;
 	private idleVisitors: IdleVisitors;
+	private anniversaryGlow: AnniversaryGlow;
+
+	private rainRipples: RainRipples;
+
+	private milestone: MilestoneCelebration;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
 
@@ -61,6 +71,12 @@ export class GardenEngine {
 		this.midnightBloom = new MidnightBloom();
 		this.titleWave = new TitleWave();
 		this.idleVisitors = new IdleVisitors();
+		this.anniversaryGlow = new AnniversaryGlow();
+
+
+		this.rainRipples = new RainRipples();
+
+		this.milestone = new MilestoneCelebration();
 		this.theme = getBlendedTheme();
 		this.camera = null!;
 	}
@@ -91,8 +107,13 @@ export class GardenEngine {
 		// Scene graph: background -> world (grass, flowers, idleVisitors, particles) -> shootingStars -> petalRain -> weather
 		this.app.stage.addChild(this.background);
 		this.app.stage.addChild(this.world);
+
 		this.app.stage.addChild(this.shootingStars.gfx);
 		this.app.stage.addChild(this.petalRain.gfx);
+
+
+		this.app.stage.addChild(this.rainRipples.gfx);
+		this.app.stage.addChild(this.milestone.gfx);
 		this.app.stage.addChild(this.weather.container);
 
 		this.world.sortableChildren = true;
@@ -107,6 +128,7 @@ export class GardenEngine {
 
 		// Manual click + hover detection on canvas
 		canvas.addEventListener('click', this.handleClick);
+
 		canvas.addEventListener('pointermove', this.handleHover);
 
 		// Render loop
@@ -125,6 +147,8 @@ export class GardenEngine {
 		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
 		fetchWeatherCondition().then((condition) => {
 			this.weather.setCondition(condition);
+			const isRaining = condition === 'rain' || condition === 'drizzle' || condition === 'showers' || condition === 'storm';
+			this.rainRipples.setRaining(isRaining);
 		});
 	}
 
@@ -160,6 +184,10 @@ export class GardenEngine {
 				return;
 			}
 		}
+
+		// Click on empty ground during rain → ripple
+		const rect = this.canvas.getBoundingClientRect();
+		this.rainRipples.trigger(e.clientX - rect.left, e.clientY - rect.top);
 	};
 
 	private lastHoveredEntry: JournalEntry | null = null;
@@ -323,6 +351,7 @@ export class GardenEngine {
 			this.app.screen.width / this.camera.zoom,
 			this.app.screen.height / this.camera.zoom
 		);
+
 	}
 
 	private update(dt: number) {
@@ -343,6 +372,13 @@ export class GardenEngine {
 		this.idleVisitors.update(dt, this.flowers);
 		this.midnightBloom.update(dt);
 		this.titleWave.update(dt, this.flowers);
+		this.anniversaryGlow.update(dt, this.flowers);
+
+
+		this.rainRipples.update(dt);
+
+		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
+		this.milestone.update(dt);
 
 		const screenW = this.app.screen.width;
 		const screenH = this.app.screen.height;
@@ -441,12 +477,49 @@ export class GardenEngine {
 		}
 	}
 
+	// Debug methods
+	debugRainRipple() {
+		const x = this.app.screen.width / 2 + (Math.random() - 0.5) * 200;
+		const y = this.app.screen.height / 2 + (Math.random() - 0.5) * 200;
+		this.rainRipples.setRaining(true);
+		this.rainRipples.trigger(x, y);
+	}
+
+	debugMilestone() {
+		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
+		(this.milestone as any).burst();
+	}
+
+	debugAnniversary() {
+		if (this.flowers.length > 0) {
+			const f = this.flowers[Math.floor(Math.random() * this.flowers.length)];
+			(this.anniversaryGlow as any).activeFlowers.set(f, 0);
+		}
+	}
+
+	/** Check milestone after planting a new flower */
+	checkMilestone(totalFlowers: number) {
+		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
+		this.milestone.checkMilestone(totalFlowers);
+	}
+
+	/** Export the current garden view as a PNG data URL */
+	exportImage(): string | null {
+		try {
+			this.app.render();
+			return this.canvas.toDataURL('image/png');
+		} catch {
+			return null;
+		}
+	}
+
 	resize() {
 		this.app.resize();
 	}
 
 	destroy() {
 		this.canvas.removeEventListener('click', this.handleClick);
+
 		this.canvas.removeEventListener('pointermove', this.handleHover);
 		this.camera.destroy();
 		this.konamiCode.destroy();
@@ -458,6 +531,12 @@ export class GardenEngine {
 		this.petalRain.destroy();
 		this.midnightBloom.destroy();
 		this.idleVisitors.destroy();
+		this.anniversaryGlow.destroy();
+
+
+		this.rainRipples.destroy();
+
+		this.milestone.destroy();
 		this.app.destroy(true);
 	}
 }

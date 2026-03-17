@@ -277,6 +277,26 @@
 		starring = false;
 	}
 
+	function encodeMood(mood: import('$lib/types.js').MoodVector): string {
+		const vals = [mood.joy, mood.energy, mood.tenderness, mood.clarity, mood.hope];
+		return vals.map(v => Math.round(v * 99).toString(16).padStart(2, '0')).join('');
+	}
+
+	let seedCopied = $state(false);
+	let seedCopiedTimer: ReturnType<typeof setTimeout> | null = null;
+
+	async function handleCopySeed() {
+		if (!entry) return;
+		const code = encodeMood(entry.mood);
+		const url = `${window.location.origin}/seed/${code}`;
+		try {
+			await navigator.clipboard.writeText(url);
+			seedCopied = true;
+			if (seedCopiedTimer) clearTimeout(seedCopiedTimer);
+			seedCopiedTimer = setTimeout(() => { seedCopied = false; }, 2000);
+		} catch {}
+	}
+
 	async function handleCopyLink() {
 		if (!entry) return;
 		const url = `${window.location.origin}/flower/${entry.id}`;
@@ -476,6 +496,15 @@
 					{:else}
 						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
 						share flower
+					{/if}
+				</button>
+				<button class="share-btn" onclick={handleCopySeed}>
+					{#if seedCopied}
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+						copied
+					{:else}
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c1-3.3 4-6 4-10a4 4 0 0 0-8 0c0 4 3 6.7 4 10z"/></svg>
+						share seed
 					{/if}
 				</button>
 			</div>

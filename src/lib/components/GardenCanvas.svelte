@@ -6,6 +6,8 @@
 	import type { JournalEntry } from '$lib/types.js';
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
+
+	export function getEngine(): GardenEngine | null { return engine ?? null; }
 	let unsub: (() => void) | null = null;
 	let unsubWave: (() => void) | null = null;
 	let handleResize: (() => void) | null = null;
@@ -13,6 +15,9 @@
 	let tooltipEntry = $state<JournalEntry | null>(null);
 	let tooltipX = $state(0);
 	let tooltipY = $state(0);
+	let whisperText = $state<string | null>(null);
+	let whisperTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastWhisperEntryId: string | null = null;
 
 	let todayPins = $state<{ entry: JournalEntry; x: number; y: number }[]>([]);
 	let latestPin = $state<{ entry: JournalEntry; x: number; y: number } | null>(null);
@@ -40,6 +45,27 @@
 				tooltipEntry = entry;
 				tooltipX = sx;
 				tooltipY = sy;
+
+				// Flower whispers: show text excerpt after 3s hover
+				if (entry && entry.id !== lastWhisperEntryId) {
+					lastWhisperEntryId = entry.id;
+					whisperText = null;
+					if (whisperTimer) clearTimeout(whisperTimer);
+					whisperTimer = setTimeout(() => {
+						if (entry.text) {
+							// Take first sentence or first 60 chars
+							const raw = entry.text.replace(/[#*_~`>\[\]]/g, '').trim();
+							const firstSentence = raw.split(/[.!?\n]/)[0]?.trim();
+							whisperText = firstSentence
+								? firstSentence.slice(0, 60) + (firstSentence.length > 60 ? '...' : '')
+								: null;
+						}
+					}, 3000);
+				} else if (!entry) {
+					lastWhisperEntryId = null;
+					whisperText = null;
+					if (whisperTimer) clearTimeout(whisperTimer);
+				}
 			};
 
 			engine.onTodayFlowers = (positions) => {
@@ -87,6 +113,7 @@
 					if (isAdd) {
 						// New flower added — reload without grow-in, recenter to latest
 						engine.loadEntries(e, true);
+						engine.checkMilestone(e.length);
 					} else if (isFirstLoad) {
 						// Initial load — grow in from center
 						engine.loadEntries(e);
@@ -144,6 +171,15 @@
 			{formatTooltipDate(tooltipEntry.date)}
 		</div>
 	{/if}
+
+	{#if whisperText && tooltipEntry}
+		<div
+			class="flower-whisper"
+			style="left: {tooltipX}px; top: {tooltipY}px"
+		>
+			"{whisperText}"
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -197,5 +233,31 @@
 		background: rgba(255, 200, 60, 0.25);
 		color: rgba(255, 220, 100, 0.95);
 		border: 1px solid rgba(255, 200, 60, 0.3);
+	}
+
+	.flower-whisper {
+		position: absolute;
+		transform: translate(-50%, -100%);
+		margin-top: -30px;
+		padding: 4px 12px;
+		border-radius: 8px;
+		background: rgba(0, 0, 0, 0.45);
+		color: rgba(255, 255, 255, 0.6);
+		font-size: 11px;
+		font-style: italic;
+		letter-spacing: 0.3px;
+		white-space: nowrap;
+		pointer-events: none;
+		backdrop-filter: blur(8px);
+		-webkit-backdrop-filter: blur(8px);
+		max-width: 250px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		animation: whisperFade 0.8s ease-in;
+	}
+
+	@keyframes whisperFade {
+		from { opacity: 0; }
+		to { opacity: 1; }
 	}
 </style>

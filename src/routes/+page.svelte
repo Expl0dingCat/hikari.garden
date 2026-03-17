@@ -27,6 +27,7 @@
 	let showStats = $state(false);
 	let showHelp = $state(false);
 	let helpStep = $state(0);
+	let gardenCanvas: GardenCanvas;
 
 	// Title wave easter egg — track rapid clicks on site name
 	let titleClicks: number[] = [];
@@ -136,13 +137,31 @@
 		}
 	});
 
+	const greeting = phase === 'dawn' ? 'good morning' : phase === 'day' ? 'good afternoon' : phase === 'dusk' ? 'good evening' : 'goodnight';
+	const pageTitle = `${greeting}, ${ownerName}'s garden`;
+
 	async function handleLogout() {
 		await fetch('/api/logout', { method: 'POST' });
 		isAdmin.set(false);
 	}
+
+	function exportGarden() {
+		const engine = gardenCanvas?.getEngine();
+		if (!engine) return;
+		const dataUrl = engine.exportImage();
+		if (!dataUrl) return;
+		const a = document.createElement('a');
+		a.href = dataUrl;
+		a.download = `${ownerName}s-garden.png`;
+		a.click();
+	}
 </script>
 
-<GardenCanvas />
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
+
+<GardenCanvas bind:this={gardenCanvas} />
 <FlowerReveal />
 
 {#if showWelcome}
@@ -289,7 +308,65 @@
 	</div>
 {/if}
 
+
 <style>
+	.debug-toggle {
+		position: fixed;
+		bottom: 80px;
+		right: 16px;
+		z-index: 300;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: 1px solid rgba(255,255,255,0.15);
+		background: rgba(0,0,0,0.5);
+		color: rgba(255,255,255,0.6);
+		font-size: 12px;
+		font-family: monospace;
+		cursor: pointer;
+		backdrop-filter: blur(4px);
+	}
+
+	.debug-panel {
+		position: fixed;
+		bottom: 115px;
+		right: 16px;
+		z-index: 300;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 10px;
+		border-radius: 10px;
+		background: rgba(0,0,0,0.7);
+		border: 1px solid rgba(255,255,255,0.1);
+		backdrop-filter: blur(8px);
+		font-family: monospace;
+		font-size: 11px;
+		color: rgba(255,255,255,0.7);
+	}
+	.debug-panel strong {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		color: rgba(255,255,255,0.4);
+		margin-bottom: 2px;
+	}
+	.debug-panel button {
+		background: rgba(255,255,255,0.08);
+		border: 1px solid rgba(255,255,255,0.1);
+		border-radius: 4px;
+		color: rgba(255,255,255,0.7);
+		padding: 4px 8px;
+		font-family: monospace;
+		font-size: 11px;
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	.debug-panel button:hover {
+		background: rgba(255,255,255,0.15);
+	}
+
 	.ui-overlay {
 		position: fixed;
 		inset: 0;

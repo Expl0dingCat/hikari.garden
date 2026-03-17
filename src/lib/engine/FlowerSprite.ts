@@ -42,6 +42,9 @@ export class FlowerSprite {
 	/** Temporary scale multiplier used by MidnightBloom and TitleWave effects */
 	bloomScale = 1;
 
+	/** Graphics layer for anniversary golden sparkles (created lazily) */
+	anniversaryGfx: Graphics | null = null;
+
 	// Bounds for manual hit testing (in world space, set after positioning)
 	worldX = 0;
 	worldY = 0;
@@ -102,6 +105,7 @@ export class FlowerSprite {
 			});
 		}
 
+		this.sparkleGfx.visible = false;
 		this.container.addChild(this.sparkleGfx);
 		this.container.addChild(this.sprite);
 	}
@@ -221,6 +225,7 @@ export class FlowerSprite {
 		this.sparkleAlpha += (targetAlpha - this.sparkleAlpha) * 0.12;
 
 		this.sparkleGfx.clear();
+		this.sparkleGfx.visible = this.sparkleAlpha > 0.01;
 		if (this.sparkleAlpha > 0.01) {
 			// Center sparkles on the flower head — shorter stems = lower center
 			const headRatio = Math.min(1, this.dna.stemHeight / 24);
@@ -240,6 +245,13 @@ export class FlowerSprite {
 				this.sparkleGfx.fill({ color: 0xffffff, alpha });
 			}
 		}
+	}
+
+	/** Lazily create the anniversary sparkle graphics layer */
+	ensureAnniversaryGfx() {
+		if (this.anniversaryGfx) return;
+		this.anniversaryGfx = new Graphics();
+		this.container.addChild(this.anniversaryGfx);
 	}
 
 	forceTextureUpload(_renderer: Renderer) {

@@ -1,10 +1,12 @@
 import { Container, Sprite, Texture, ImageSource } from 'pixi.js';
+import { applySeasonalTintNum } from './SeasonalGround.js';
 
-const GRASS_COLORS = [
+const BASE_GRASS_COLORS = [
 	0x4a7c59, 0x3d6b4e, 0x5a8a65, 0x6b9970, 0x3e7048,
 	0x4e8560, 0x588a5c, 0x467052, 0x5c9468, 0x3a6045,
 	0x4f7a50, 0x558855, 0x3b5e40, 0x689e6a, 0x527a4d
 ];
+const GRASS_COLORS = BASE_GRASS_COLORS.map(applySeasonalTintNum);
 
 const CLUMP_W = 14;
 const CLUMP_H = 18;

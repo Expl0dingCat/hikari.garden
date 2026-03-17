@@ -346,7 +346,7 @@
 			width: 100%;
 		}
 		.top-meta {
-			flex-wrap: wrap;
+			display: none;
 		}
 		.card-body {
 			flex-direction: column;
