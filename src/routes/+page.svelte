@@ -14,6 +14,7 @@
 
 	const ownerName = env.PUBLIC_OWNER_NAME || 'hikari';
 	const isOriginal = env.PUBLIC_ORIGINAL === 'true';
+	const showHelpIcon = env.PUBLIC_SHOW_HELP === 'true';
 
 	const phase = getTimePhase();
 	const editorThemeStyle = getUIThemeStyle();
@@ -24,6 +25,8 @@
 	let showEditor = $state(false);
 	let showWelcome = $state(true);
 	let showStats = $state(false);
+	let showHelp = $state(false);
+	let helpStep = $state(0);
 
 	// Title wave easter egg — track rapid clicks on site name
 	let titleClicks: number[] = [];
@@ -153,6 +156,9 @@
 		<h1 class="site-name" onclick={handleTitleClick}>hikari.garden</h1>
 
 		<div class="controls">
+			{#if showHelpIcon}
+				<button class="btn btn-ghost btn-icon" onclick={() => (showHelp = true)} aria-label="What is this?"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+			{/if}
 			{#if isOriginal}
 				<a class="btn btn-ghost btn-icon hide-mobile" href="https://github.com/Expl0dingCat/hikari.garden" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg></a>
 			{/if}
@@ -209,6 +215,69 @@
 	<div class="editor-overlay" style="{editorThemeStyle};cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
 		<div onclick={(e) => e.stopPropagation()}>
 			<JournalEditor onsubmit={handleSubmit} oncancel={() => (showEditor = false)} />
+		</div>
+	</div>
+{/if}
+
+{#if showHelp}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="help-overlay" style={editorThemeStyle} transition:fade={{ duration: 200 }} onclick={() => { showHelp = false; helpStep = 0; }}>
+		<div class="help-card" onclick={(e) => e.stopPropagation()}>
+			<button class="help-close" onclick={() => { showHelp = false; helpStep = 0; }}>&times;</button>
+
+			<div class="help-content">
+			{#key helpStep}
+				<div class="help-step" in:fade={{ duration: 250, delay: 150 }} out:fade={{ duration: 150 }}>
+					{#if helpStep === 0}
+						<div class="help-illustration">
+							<img src="/help/1.png" alt="" class="help-img" />
+						</div>
+						<h2 class="help-title">welcome to {ownerName}'s garden</h2>
+						<p class="help-text">a living journal where every entry plants a unique pixel flower. each one grows from a moment, shaped by how you felt that day.</p>
+					{:else if helpStep === 1}
+						<div class="help-illustration">
+							<img src="/help/2.png" alt="" class="help-img" />
+						</div>
+						<h2 class="help-title">feelings become flowers</h2>
+						<p class="help-text">five mood axes shape each flower's petals, colors, and height. joy bends the petals one way, fog another. no two flowers are the same.</p>
+					{:else}
+						<div class="help-illustration">
+							<img src="/help/3.png" alt="" class="help-img" />
+						</div>
+						<h2 class="help-title">it breathes with you</h2>
+						<p class="help-text">the garden shifts with the time of day and mirrors the weather outside. click any flower to read the entry that grew it.</p>
+						<a class="help-cta" href="https://github.com/Expl0dingCat/hikari.garden" target="_blank" rel="noopener noreferrer">
+							<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+							become a gardener
+						</a>
+					{/if}
+				</div>
+			{/key}
+			</div>
+
+			<div class="help-footer">
+				<div class="help-dots">
+					{#each [0, 1, 2] as i}
+						<button
+							class="help-dot"
+							class:active={helpStep === i}
+							onclick={() => (helpStep = i)}
+							aria-label="Step {i + 1}"
+						></button>
+					{/each}
+				</div>
+				<div class="help-nav">
+					{#if helpStep > 0}
+						<button class="help-back" onclick={() => (helpStep--)}>back</button>
+					{/if}
+					{#if helpStep < 2}
+						<button class="help-next" onclick={() => (helpStep++)}>continue</button>
+					{:else}
+						<button class="help-next" onclick={() => { showHelp = false; helpStep = 0; }}>enter</button>
+					{/if}
+				</div>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -477,6 +546,193 @@
 		.welcome p {
 			font-size: 20px;
 			letter-spacing: 2px;
+		}
+	}
+
+	.help-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+		background: var(--ui-overlay);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
+
+	.help-card {
+		position: relative;
+		background: var(--ui-card);
+		border: 1px solid var(--ui-card-border);
+		border-radius: 20px;
+		padding: 12px 12px 16px;
+		max-width: 400px;
+		width: 100%;
+		box-shadow: var(--ui-shadow);
+		color: var(--ui-text);
+		overflow: hidden;
+	}
+
+	.help-close {
+		position: absolute;
+		top: 12px;
+		right: 14px;
+		background: none;
+		border: none;
+		font-size: 20px;
+		color: var(--ui-text-muted);
+		cursor: var(--cursor-pointer, pointer);
+		line-height: 1;
+		padding: 4px 6px;
+		transition: color 0.2s;
+		z-index: 1;
+	}
+	.help-close:hover {
+		color: var(--ui-text);
+	}
+
+	.help-content {
+		height: 400px;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.help-step {
+		display: flex;
+		flex-direction: column;
+		position: absolute;
+		inset: 0;
+	}
+
+	.help-illustration {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: 230px;
+		flex-shrink: 0;
+		border-radius: 12px;
+		overflow: hidden;
+		background: rgba(0, 0, 0, 0.2);
+		margin-bottom: 20px;
+	}
+
+	.help-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
+	.help-title {
+		font-family: 'Darumadrop One', cursive;
+		font-weight: 400;
+		font-size: 22px;
+		letter-spacing: 1.5px;
+		color: var(--ui-text);
+		margin: 0 20px 12px 8px;
+	}
+
+	.help-text {
+		font-family: 'Mona Sans', sans-serif;
+		font-size: 14px;
+		line-height: 1.7;
+		color: var(--ui-text-soft, var(--ui-text));
+		letter-spacing: 0.2px;
+		margin: 0 20px 0 8px;
+	}
+
+	.help-footer {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 8px;
+	}
+
+	.help-dots {
+		display: flex;
+		gap: 6px;
+	}
+
+	.help-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 4px;
+		border: none;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.12));
+		cursor: var(--cursor-pointer, pointer);
+		padding: 0;
+		transition: background 0.2s, width 0.3s;
+	}
+	.help-dot.active {
+		width: 24px;
+		background: var(--ui-text-muted);
+	}
+
+	.help-nav {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.help-back {
+		font-family: 'Mona Sans', sans-serif;
+		font-size: 13px;
+		padding: 8px 16px;
+		border: none;
+		border-radius: 8px;
+		background: none;
+		color: var(--ui-text-muted);
+		cursor: var(--cursor-pointer, pointer);
+		letter-spacing: 0.3px;
+		transition: color 0.2s;
+	}
+	.help-back:hover {
+		color: var(--ui-text);
+	}
+
+	.help-next {
+		font-family: 'Mona Sans', sans-serif;
+		font-size: 13px;
+		padding: 8px 20px;
+		border: none;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.12);
+		color: var(--ui-text);
+		cursor: var(--cursor-pointer, pointer);
+		letter-spacing: 0.3px;
+		transition: background 0.2s;
+	}
+	.help-next:hover {
+		background: rgba(255, 255, 255, 0.18);
+	}
+
+	.help-cta {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin: 12px 20px 0 8px;
+		font-family: 'Mona Sans', sans-serif;
+		font-size: 12px;
+		color: var(--ui-text-muted);
+		text-decoration: none;
+		letter-spacing: 0.3px;
+		transition: color 0.2s;
+	}
+	.help-cta:hover {
+		color: var(--ui-text);
+	}
+
+	@media (max-width: 600px) {
+		.help-card {
+			padding: 10px 10px 20px;
+			border-radius: 16px;
+		}
+		.help-illustration {
+			height: 160px;
+		}
+		.help-title {
+			font-size: 19px;
 		}
 	}
 </style>
