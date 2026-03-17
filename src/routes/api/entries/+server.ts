@@ -38,7 +38,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		weather: body.weather || undefined,
 		images: body.images || undefined,
 		song: body.song || undefined,
-		smells: 0
+		smells: 0,
+		isStarred: false
 	};
 
 	createEntry(entry);

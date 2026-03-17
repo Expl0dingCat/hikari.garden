@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { GardenEngine } from '$lib/engine/GardenEngine.js';
-	import { monthEntries, selectedFlower, currentMonth, availableMonths, titleWaveTrigger } from '$lib/stores/garden.js';
+	import { monthEntries, selectedFlower, currentMonth, availableMonths, titleWaveTrigger, pendingDeepLink } from '$lib/stores/garden.js';
+	import { get } from 'svelte/store';
 	import type { JournalEntry } from '$lib/types.js';
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
@@ -70,6 +71,19 @@
 					const isAdd = loadedIds.length > 0 && e.length > 0 && newIds.startsWith(loadedIds);
 					const isFirstLoad = loadedIds.length === 0;
 					loadedIds = newIds;
+
+					// Set deep link before loadEntries so camera focuses on the right flower
+					const deepId = get(pendingDeepLink);
+					if (deepId && isFirstLoad) {
+						const target = e.find((entry) => entry.id === deepId);
+						if (target) {
+							pendingDeepLink.set(null);
+							engine.deepLinkFlowerId = deepId;
+							// Open overlay immediately
+							selectedFlower.set(target);
+						}
+					}
+
 					if (isAdd) {
 						// New flower added — reload without grow-in, recenter to latest
 						engine.loadEntries(e, true);

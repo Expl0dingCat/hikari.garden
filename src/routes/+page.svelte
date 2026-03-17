@@ -4,7 +4,8 @@
 	import JournalEditor from '$lib/components/JournalEditor.svelte';
 	import LoginDialog from '$lib/components/LoginDialog.svelte';
 	import GardenStats from '$lib/components/GardenStats.svelte';
-	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries, titleWaveTrigger } from '$lib/stores/garden.js';
+	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries, titleWaveTrigger, STARRED_MONTH, selectedFlower, pendingDeepLink } from '$lib/stores/garden.js';
+	import { page } from '$app/stores';
 	import { getTimePhase, getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
@@ -48,6 +49,26 @@
 		entries.set(data.entries);
 	});
 
+	// Handle ?flower= deep link
+	let deepLinked = false;
+	$effect(() => {
+		const flowerId = $page.url.searchParams.get('flower');
+		if (!flowerId || deepLinked) return;
+		const all = $entries;
+		if (all.length === 0) return;
+		const target = all.find((e) => e.id === flowerId);
+		if (target) {
+			deepLinked = true;
+			showWelcome = false;
+			// Switch to the flower's month so it's in the garden
+			currentMonth.set(target.date.slice(0, 7));
+			// Tell GardenCanvas to center + open this flower after it loads
+			pendingDeepLink.set(target.id);
+			// Clean the URL
+			history.replaceState({}, '', '/');
+		}
+	});
+
 	async function handleSubmit(entry: { title: string; text: string; mood: MoodVector; date: string; tags: string[]; weather?: import('$lib/types.js').Weather; images?: string[]; song?: import('$lib/types.js').Song; flowerSeed?: number }) {
 		const res = await fetch('/api/entries', {
 			method: 'POST',
@@ -67,29 +88,43 @@
 	}
 
 	function formatMonth(ym: string): string {
+		if (ym === STARRED_MONTH) return 'favourites';
 		const [y, m] = ym.split('-');
 		const d = new Date(parseInt(y), parseInt(m) - 1);
 		return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 	}
 
+	let hasStarred = $derived($entries.some((e) => e.isStarred));
+
 	function prevMonth() {
+		if ($currentMonth === STARRED_MONTH) {
+			const months = $availableMonths;
+			if (months.length > 0) currentMonth.set(months[months.length - 1]);
+			return;
+		}
 		const months = $availableMonths;
 		const idx = months.indexOf($currentMonth);
 		if (idx > 0) currentMonth.set(months[idx - 1]);
 	}
 
 	function nextMonth() {
+		if ($currentMonth === STARRED_MONTH) return;
 		const months = $availableMonths;
 		const idx = months.indexOf($currentMonth);
-		if (idx < months.length - 1) currentMonth.set(months[idx + 1]);
+		if (idx < months.length - 1) {
+			currentMonth.set(months[idx + 1]);
+		} else if (hasStarred) {
+			currentMonth.set(STARRED_MONTH);
+		}
 	}
 
-	let hasPrev = $derived($availableMonths.indexOf($currentMonth) > 0);
-	let hasNext = $derived($availableMonths.indexOf($currentMonth) < $availableMonths.length - 1);
+	let hasPrev = $derived($currentMonth === STARRED_MONTH ? $availableMonths.length > 0 : $availableMonths.indexOf($currentMonth) > 0);
+	let hasNext = $derived($currentMonth !== STARRED_MONTH && ($availableMonths.indexOf($currentMonth) < $availableMonths.length - 1 || hasStarred));
 
 	// When entries load, ensure currentMonth is valid (default to latest month with entries)
 	$effect(() => {
 		const months = $availableMonths;
+		if ($currentMonth === STARRED_MONTH) return;
 		if (months.length > 0 && !months.includes($currentMonth)) {
 			currentMonth.set(months[months.length - 1]);
 		}
@@ -147,7 +182,12 @@
 			<button class="month-arrow" onclick={prevMonth} disabled={!hasPrev} aria-label="Previous month">
 				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
 			</button>
-			<span class="month-label">{formatMonth($currentMonth)}</span>
+			<span class="month-label">
+			{#if $currentMonth === STARRED_MONTH}
+				<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="none" style="vertical-align:-2px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+			{/if}
+			{formatMonth($currentMonth)}
+		</span>
 			<button class="month-arrow" onclick={nextMonth} disabled={!hasNext} aria-label="Next month">
 				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
 			</button>

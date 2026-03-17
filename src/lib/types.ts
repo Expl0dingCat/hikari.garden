@@ -35,6 +35,7 @@ export interface JournalEntry {
 	images?: string[];
 	song?: Song;
 	smells: number;
+	isStarred: boolean;
 }
 
 export type PetalShapeId =

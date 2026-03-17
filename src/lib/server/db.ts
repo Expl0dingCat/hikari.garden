@@ -55,5 +55,8 @@ if (!colNames.includes('song')) {
 if (!colNames.includes('smells')) {
 	db.exec("ALTER TABLE entries ADD COLUMN smells INTEGER NOT NULL DEFAULT 0");
 }
+if (!colNames.includes('is_starred')) {
+	db.exec("ALTER TABLE entries ADD COLUMN is_starred INTEGER NOT NULL DEFAULT 0");
+}
 
 export default db;

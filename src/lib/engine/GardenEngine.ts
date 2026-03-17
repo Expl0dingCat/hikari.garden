@@ -33,6 +33,7 @@ export class GardenEngine {
 	private growInActive = false;
 	private growInTimer = 0;
 	private shrinkOutActive = false;
+	deepLinkFlowerId: string | null = null;
 	private pendingEntries: JournalEntry[] | null = null;
 	private shootingStars: ShootingStars;
 	private konamiCode!: KonamiCode;
@@ -297,6 +298,17 @@ export class GardenEngine {
 			if (this.latestFlower) {
 				this.camera.focusOn(this.latestFlower.worldX, this.latestFlower.worldY, 1.2);
 			}
+		} else if (this.deepLinkFlowerId) {
+			// Deep link — start camera focused on the linked flower, skip grow-in pan
+			const target = this.flowers.find((f) => f.entry.id === this.deepLinkFlowerId);
+			if (target) {
+				this.camera.focusOn(target.worldX, target.worldY, 1.2);
+				this.camera.x = -target.worldX;
+				this.camera.y = -target.worldY;
+				this.camera.zoom = 1.2;
+			}
+			this.growInActive = true;
+			this.growInTimer = 0;
 		} else {
 			// Start camera at center (0,0) during grow-in, then pan to newest
 			this.camera.focusOn(0, 0, 0.8);
@@ -364,15 +376,16 @@ export class GardenEngine {
 			}
 		}
 
-		// Grow-in → pause → camera pan to latest
+		// Grow-in → pause → camera pan to latest (skip if deep linked)
 		if (this.growInActive) {
 			this.growInTimer += dt / 60; // seconds
 			const totalGrow = Math.min(this.flowers.length * 0.06, 3);
 			if (this.growInTimer > totalGrow + 1.5) {
 				this.growInActive = false;
-				if (this.latestFlower && !this.camera.userInteracted) {
+				if (!this.deepLinkFlowerId && this.latestFlower && !this.camera.userInteracted) {
 					this.camera.focusOn(this.latestFlower.worldX, this.latestFlower.worldY, 1.2);
 				}
+				this.deepLinkFlowerId = null;
 			}
 		}
 
@@ -419,6 +432,13 @@ export class GardenEngine {
 	triggerTitleWave() {
 		if (this.growInActive || this.shrinkOutActive) return;
 		this.titleWave.trigger(this.flowers);
+	}
+
+	centerOnFlower(id: string) {
+		const f = this.flowers.find((fl) => fl.entry.id === id);
+		if (f) {
+			this.camera.focusOn(f.worldX, f.worldY, 1.2);
+		}
 	}
 
 	resize() {

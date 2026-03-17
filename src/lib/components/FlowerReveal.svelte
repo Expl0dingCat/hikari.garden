@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { selectedFlower, entries, cursorDefault, cursorPointer } from '$lib/stores/garden.js';
+	import { selectedFlower, entries, cursorDefault, cursorPointer, isAdmin } from '$lib/stores/garden.js';
 	import { fade, fly } from 'svelte/transition';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
@@ -23,6 +23,10 @@
 	let smelling = $state(false);
 	let smellToast = $state<string | null>(null);
 	let smellToastTimer: ReturnType<typeof setTimeout> | null = null;
+	let starred = $state(false);
+	let starring = $state(false);
+	let linkCopied = $state(false);
+	let linkCopiedTimer: ReturnType<typeof setTimeout> | null = null;
 	let lightboxOpen = $state(false);
 	let lightboxIndex = $state(0);
 	let flowerCanvas: HTMLCanvasElement;
@@ -130,6 +134,7 @@
 			smellCount = currentEntry.smells || 0;
 			smelled = false;
 			smellToast = null;
+			starred = currentEntry.isStarred || false;
 			if (smellToastTimer) clearTimeout(smellToastTimer);
 			revealTimer = setTimeout(() => {
 				displayedText = currentEntry.text;
@@ -191,6 +196,37 @@
 			}
 		} catch {}
 		smelling = false;
+	}
+
+	async function handleStar() {
+		if (!entry || starring) return;
+		starring = true;
+		try {
+			const res = await fetch(`/api/entries/${entry.id}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'star' })
+			});
+			if (res.ok) {
+				const data = await res.json();
+				starred = data.isStarred;
+				entries.update((all) =>
+					all.map((e) => (e.id === entry!.id ? { ...e, isStarred: data.isStarred } : e))
+				);
+			}
+		} catch {}
+		starring = false;
+	}
+
+	async function handleCopyLink() {
+		if (!entry) return;
+		const url = `${window.location.origin}/flower/${entry.id}`;
+		try {
+			await navigator.clipboard.writeText(url);
+			linkCopied = true;
+			if (linkCopiedTimer) clearTimeout(linkCopiedTimer);
+			linkCopiedTimer = setTimeout(() => { linkCopied = false; }, 2000);
+		} catch {}
 	}
 
 	function close() {
@@ -271,6 +307,13 @@
 					</svg>
 					<span class="smell-count">{smellCount}</span>
 				</button>
+				{#if $isAdmin}
+					<button class="star-btn" class:starred onclick={handleStar} disabled={starring} aria-label={starred ? 'Unstar flower' : 'Star flower'}>
+						<svg viewBox="0 0 24 24" width="14" height="14" fill={starred ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>
+						</svg>
+					</button>
+				{/if}
 				<div class="top-meta">
 					{#if relativeDate(entry.date)}
 						<span class="meta-tag">{relativeDate(entry.date)}</span>
@@ -364,6 +407,18 @@
 						</div>
 					{/if}
 				</div>
+			</div>
+
+			<div class="card-footer">
+				<button class="share-btn" onclick={handleCopyLink}>
+					{#if linkCopied}
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+						copied
+					{:else}
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+						share flower
+					{/if}
+				</button>
 			</div>
 		</div>
 	</div>
@@ -628,6 +683,62 @@
 
 	.smell-count {
 		font-variant-numeric: tabular-nums;
+	}
+
+	.star-btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 3px 7px;
+		border-radius: 6px;
+		border: none;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		color: rgba(255, 255, 255, 0.5);
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s, color 0.2s, transform 0.15s;
+		flex-shrink: 0;
+		line-height: 1;
+	}
+	.star-btn:hover:not(:disabled) {
+		background: var(--ui-divider);
+		color: rgba(255, 200, 50, 0.9);
+	}
+	.star-btn:active:not(:disabled) {
+		transform: scale(0.95);
+	}
+	.star-btn.starred {
+		color: rgba(255, 200, 50, 0.9);
+	}
+	.star-btn:disabled:not(.starred) {
+		opacity: 0.5;
+		cursor: default;
+	}
+
+	.card-footer {
+		display: flex;
+		justify-content: flex-end;
+		padding-top: 12px;
+		margin-top: 8px;
+		border-top: 1px solid var(--ui-divider);
+	}
+
+	.share-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		padding: 4px 10px;
+		border-radius: 6px;
+		border: none;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		color: var(--ui-text-muted);
+		font-family: inherit;
+		font-size: 11px;
+		letter-spacing: 0.3px;
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s, color 0.2s;
+	}
+	.share-btn:hover {
+		background: var(--ui-divider);
+		color: var(--ui-text);
 	}
 
 	.smell-toast {

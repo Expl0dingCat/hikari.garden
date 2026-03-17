@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { getEntryById, updateEntry, deleteEntry, smellFlower } from '$lib/server/entries.js';
+import { getEntryById, updateEntry, deleteEntry, smellFlower, toggleStar } from '$lib/server/entries.js';
 import { generateFlowerName } from '$lib/generation/NameGenerator.js';
 import { hashString } from '$lib/generation/SeededRandom.js';
 
@@ -12,6 +12,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			return json({ error: 'Not found' }, { status: 404 });
 		}
 		return json({ smells });
+	}
+	if (body.action === 'star') {
+		const isStarred = toggleStar(params.id);
+		if (isStarred === null) {
+			return json({ error: 'Not found' }, { status: 404 });
+		}
+		return json({ isStarred });
 	}
 	return json({ error: 'Unknown action' }, { status: 400 });
 };

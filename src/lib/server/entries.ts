@@ -20,6 +20,7 @@ interface EntryRow {
 	images: string | null;
 	song: string | null;
 	smells: number;
+	is_starred: number;
 }
 
 function rowToEntry(row: EntryRow): JournalEntry {
@@ -43,7 +44,8 @@ function rowToEntry(row: EntryRow): JournalEntry {
 		weather: row.weather ? JSON.parse(row.weather) : undefined,
 		images: row.images ? JSON.parse(row.images) : undefined,
 		song: row.song ? JSON.parse(row.song) : undefined,
-		smells: row.smells || 0
+		smells: row.smells || 0,
+		isStarred: Boolean(row.is_starred)
 	};
 }
 
@@ -70,7 +72,8 @@ const stmts = {
 		WHERE id = @id
 	`),
 	delete: db.prepare('DELETE FROM entries WHERE id = ?'),
-	smell: db.prepare('UPDATE entries SET smells = smells + 1 WHERE id = ? RETURNING smells')
+	smell: db.prepare('UPDATE entries SET smells = smells + 1 WHERE id = ? RETURNING smells'),
+	toggleStar: db.prepare('UPDATE entries SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ? RETURNING is_starred')
 };
 
 export function getAllEntries(): JournalEntry[] {
@@ -127,4 +130,9 @@ export function deleteEntry(id: string): boolean {
 export function smellFlower(id: string): number | null {
 	const row = stmts.smell.get(id) as { smells: number } | undefined;
 	return row ? row.smells : null;
+}
+
+export function toggleStar(id: string): boolean | null {
+	const row = stmts.toggleStar.get(id) as { is_starred: number } | undefined;
+	return row !== undefined ? Boolean(row.is_starred) : null;
 }

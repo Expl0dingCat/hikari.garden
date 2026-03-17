@@ -8,11 +8,16 @@ export const isAdmin = writable(false);
 /** Current month view in YYYY-MM format */
 export const currentMonth = writable<string>(new Date().toISOString().slice(0, 7));
 
-/** Entries filtered to the current month */
+/** Special month key for the starred/favourites garden */
+export const STARRED_MONTH = '__starred__';
+
+/** Entries filtered to the current month, or starred entries */
 export const monthEntries = derived(
 	[entries, currentMonth],
 	([$entries, $currentMonth]) =>
-		$entries.filter((e) => e.date.startsWith($currentMonth))
+		$currentMonth === STARRED_MONTH
+			? $entries.filter((e) => e.isStarred)
+			: $entries.filter((e) => e.date.startsWith($currentMonth))
 );
 
 /** All unique months that have entries, sorted ascending */
@@ -27,3 +32,6 @@ export const cursorPointer = writable<string>('');
 
 /** Increment to trigger title wave easter egg */
 export const titleWaveTrigger = writable(0);
+
+/** Pending deep link flower ID — GardenCanvas will center on this flower after load */
+export const pendingDeepLink = writable<string | null>(null);
