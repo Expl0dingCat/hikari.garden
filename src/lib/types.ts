@@ -18,6 +18,7 @@ export interface Song {
 	artist: string;
 	albumArt: string; // URL to album artwork
 	spotifyUrl: string; // External Spotify URL for playback
+	previewUrl?: string; // 30-second MP3 preview (often null for newer tracks)
 }
 
 export interface JournalEntry {

@@ -22,6 +22,7 @@
 	let smelled = $state(false);
 	let smelling = $state(false);
 	let smellToast = $state<string | null>(null);
+	let embedLoadTimer: ReturnType<typeof setTimeout> | null = null;
 	let smellToastTimer: ReturnType<typeof setTimeout> | null = null;
 	let starred = $state(false);
 	let starring = $state(false);
@@ -32,6 +33,88 @@
 	let flowerCanvas: HTMLCanvasElement;
 	let flowerSideEl: HTMLDivElement;
 	let textSideHeight = $state('auto');
+
+	// ─── Song playback via Spotify embed ───
+	let songPlaying = $state(false);
+	let embedReady = $state(false);
+	let embedController: any = null;
+	let embedContainer: HTMLDivElement | null = null;
+
+	// Eagerly load the Spotify IFrame API script on component init
+	if (typeof window !== 'undefined' && !(window as any).SpotifyIframeApi) {
+		if (!document.querySelector('script[src*="spotify.com/embed"]')) {
+			const s = document.createElement('script');
+			s.src = 'https://open.spotify.com/embed/iframe-api/v1';
+			s.async = true;
+			document.head.appendChild(s);
+		}
+	}
+
+	function ensureSpotifyApi(): Promise<any> {
+		if ((window as any).SpotifyIframeApi) return Promise.resolve((window as any).SpotifyIframeApi);
+		return new Promise((resolve) => {
+			const prev = (window as any).onSpotifyIframeApiReady;
+			(window as any).onSpotifyIframeApiReady = (IFrameAPI: any) => {
+				(window as any).SpotifyIframeApi = IFrameAPI;
+				prev?.(IFrameAPI);
+				resolve(IFrameAPI);
+			};
+		});
+	}
+
+	let wantsPlay = $state(false);
+
+	/** Silently preload embed in background (no auto-play). */
+	function preloadEmbed(trackId: string) {
+		destroyEmbed();
+		const container = document.createElement('div');
+		container.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none';
+		document.body.appendChild(container);
+		embedContainer = container;
+
+		ensureSpotifyApi().then((IFrameAPI) => {
+			if (!embedContainer || embedContainer !== container) return;
+			IFrameAPI.createController(container, {
+				uri: `spotify:track:${trackId}`,
+				width: 1,
+				height: 1,
+			}, (controller: any) => {
+				if (embedContainer !== container) { try { controller.destroy(); } catch {} return; }
+				embedController = controller;
+				embedReady = true;
+				controller.addListener('playback_update', (e: any) => {
+					songPlaying = !e.data.isPaused;
+				});
+				// If user already clicked play while we were loading, start now
+				if (wantsPlay) {
+					wantsPlay = false;
+					controller.play();
+				}
+			});
+		});
+	}
+
+	function toggleSong() {
+		if (embedController) {
+			embedController.togglePlay();
+			return;
+		}
+		// Embed still loading — flag it to auto-play when ready
+		wantsPlay = true;
+	}
+
+	function destroyEmbed() {
+		if (embedController) {
+			try { embedController.destroy(); } catch {}
+			embedController = null;
+		}
+		if (embedContainer) {
+			try { embedContainer.remove(); } catch {}
+			embedContainer = null;
+		}
+		songPlaying = false;
+		embedReady = false;
+	}
 
 	const FLOWER_SCALE = 5;
 
@@ -139,9 +222,23 @@
 				displayedText = currentEntry.text;
 				setTimeout(() => { showTags = true; }, 500);
 			}, 300);
+
+			destroyEmbed();
+			wantsPlay = false;
+			// Preload embed after card animation settles so play is instant
+			if (currentEntry.song) {
+				if (embedLoadTimer) clearTimeout(embedLoadTimer);
+				embedLoadTimer = setTimeout(() => {
+					if (entry?.song?.trackId === currentEntry.song!.trackId) {
+						preloadEmbed(currentEntry.song!.trackId);
+					}
+				}, 600);
+			}
 		}
 		return () => {
 			if (revealTimer) clearTimeout(revealTimer);
+			if (embedLoadTimer) clearTimeout(embedLoadTimer);
+			destroyEmbed();
 		};
 	});
 
@@ -337,6 +434,7 @@
 	}
 
 	function close() {
+		destroyEmbed();
 		selectedFlower.set(null);
 		displayedText = '';
 		showTags = false;
@@ -501,6 +599,13 @@
 									<span class="song-title">{entry.song.title}</span>
 									<span class="song-artist">{entry.song.artist}</span>
 								</div>
+								<button class="song-play-btn" class:playing={songPlaying} onclick={toggleSong} aria-label={songPlaying ? 'Pause' : 'Play'}>
+									{#if songPlaying}
+										<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+									{:else}
+										<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21"/></svg>
+									{/if}
+								</button>
 								<a href={entry.song.spotifyUrl} target="_blank" rel="noopener noreferrer" class="song-link" aria-label="Open on Spotify">
 									<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
 								</a>
@@ -1232,4 +1337,30 @@
 	.song-link:hover {
 		color: var(--ui-text);
 	}
+
+	.song-play-btn {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		border: none;
+		background: var(--ui-divider);
+		color: var(--ui-text-muted);
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s, color 0.2s, transform 0.15s;
+	}
+	.song-play-btn:hover {
+		background: var(--ui-text-muted);
+		color: var(--ui-card);
+	}
+	.song-play-btn:active {
+		transform: scale(0.92);
+	}
+	.song-play-btn.playing {
+		color: var(--ui-text);
+	}
+
 </style>

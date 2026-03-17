@@ -1,41 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { env } from '$env/dynamic/private';
-
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
-	if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
-		return cachedToken.token;
-	}
-
-	const clientId = env.SPOTIFY_CLIENT_ID;
-	const clientSecret = env.SPOTIFY_CLIENT_SECRET;
-
-	if (!clientId || !clientSecret) {
-		throw new Error('Spotify credentials not configured');
-	}
-
-	const res = await fetch('https://accounts.spotify.com/api/token', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/x-www-form-urlencoded',
-			Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`
-		},
-		body: 'grant_type=client_credentials'
-	});
-
-	if (!res.ok) {
-		throw new Error('Failed to get Spotify access token');
-	}
-
-	const data = await res.json();
-	cachedToken = {
-		token: data.access_token,
-		expiresAt: Date.now() + data.expires_in * 1000
-	};
-	return cachedToken.token;
-}
+import { getSpotifyToken } from '$lib/server/spotify.js';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.isAdmin) {
@@ -48,7 +13,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	}
 
 	try {
-		const token = await getAccessToken();
+		const token = await getSpotifyToken();
 		const searchRes = await fetch(
 			`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=6`,
 			{ headers: { Authorization: `Bearer ${token}` } }
@@ -64,7 +29,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 			title: t.name,
 			artist: t.artists.map((a: any) => a.name).join(', '),
 			albumArt: t.album.images?.[1]?.url || t.album.images?.[0]?.url || '',
-			spotifyUrl: t.external_urls?.spotify || ''
+			spotifyUrl: t.external_urls?.spotify || '',
+			...(t.preview_url ? { previewUrl: t.preview_url } : {})
 		}));
 
 		return json({ tracks });

@@ -282,4 +282,15 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+
+	@media (max-width: 700px) {
+		.dropdown {
+			position: fixed;
+			left: 16px;
+			right: 16px;
+			bottom: 70px;
+			top: auto;
+			max-height: 40vh;
+		}
+	}
 </style>
