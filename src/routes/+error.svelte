@@ -1,13 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
 	import { env } from '$env/dynamic/public';
 
 	const ownerName = env.PUBLIC_OWNER_NAME || 'hikari';
-	const themeStyle = getUIThemeStyle();
-
 	let canvas: HTMLCanvasElement;
 
 	$effect(() => {
@@ -32,7 +29,7 @@
 	});
 </script>
 
-<div class="error-page" style={themeStyle}>
+<div class="error-page">
 	<canvas bind:this={canvas} class="flower"></canvas>
 	<h1>{$page.status}</h1>
 	<p>this flower doesn't exist</p>

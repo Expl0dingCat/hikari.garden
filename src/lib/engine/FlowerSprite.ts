@@ -42,6 +42,12 @@ export class FlowerSprite {
 	/** Temporary scale multiplier used by MidnightBloom and TitleWave effects */
 	bloomScale = 1;
 
+	/** Night sleep factor — set by engine based on time of day (0 = awake, 1 = sleeping) */
+	sleepFactor = 0;
+
+	/** Global wind lean — set by engine's WindSystem */
+	windLean = 0;
+
 	/** Graphics layer for anniversary golden sparkles (created lazily) */
 	anniversaryGfx: Graphics | null = null;
 
@@ -207,13 +213,17 @@ export class FlowerSprite {
 			return;
 		}
 
-		// Breathing
-		const breathe = 1 + Math.sin(time * 0.5 + this.entry.flowerSeed * 0.7) * 0.018;
-		this.container.scale.set(this.hoverScale * breathe * this.bloomScale);
+		// Breathing — slower and subtler when sleeping
+		const breathSpeed = 0.5 - this.sleepFactor * 0.25;
+		const breathAmp = 0.018 - this.sleepFactor * 0.008;
+		const breathe = 1 + Math.sin(time * breathSpeed + this.entry.flowerSeed * 0.7) * breathAmp;
+		// Sleeping flowers gently close (scale down slightly based on bloom)
+		const sleepScale = 1 - this.sleepFactor * this.dna.bloomState * 0.08;
+		this.container.scale.set(this.hoverScale * breathe * this.bloomScale * sleepScale);
 
-		// Sway
+		// Sway + wind
 		const swayAmount = 0.02 * (1 - this.dna.stemCurve * 0.5);
-		this.container.rotation = Math.sin(time * 0.8 + this.entry.flowerSeed) * swayAmount;
+		this.container.rotation = Math.sin(time * 0.8 + this.entry.flowerSeed) * swayAmount + this.windLean;
 
 		// Pixel animation frames (safe modulo to avoid negative indices)
 		const rawFrame = (time * this.animSpeed + this.animPhase) % ANIM_FRAMES;

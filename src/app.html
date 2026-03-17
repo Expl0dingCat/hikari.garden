@@ -3,6 +3,46 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			// Set body background + data-phase BEFORE anything renders.
+			// Prevents color/theme flash from SSR timezone mismatch.
+			// CSS vars in app.css use html[data-phase] selectors.
+			(function() {
+				var h = new Date().getHours(), m = new Date().getMinutes();
+				var fh = h + m / 60;
+				// Try cached IP-based solar times from localStorage, fall back to month-adjusted defaults
+				var sr = 6.5, ss = 19.5;
+				try {
+					var stored = localStorage.getItem('hikari-solar');
+					if (stored) {
+						var parsed = JSON.parse(stored);
+						if (parsed.v === 2 && parsed.date === new Date().toDateString() && parsed.sunrise && parsed.sunset) {
+							sr = parsed.sunrise;
+							ss = parsed.sunset;
+						}
+					}
+				} catch(e) {}
+				if (sr === 6.5) {
+					// No cached data — use month-adjusted approximation
+					var month = new Date().getMonth();
+					var srAdj = [1, 0.5, 0, -0.5, -1, -1, -0.5, 0, 0.5, 1, 1, 1];
+					sr = 6.5 + (srAdj[month] || 0);
+					ss = 19.5 - (srAdj[month] || 0);
+				}
+				var dawnStart = sr - 0.5, dawnEnd = sr + 1, duskStart = ss - 1, duskEnd = ss + 0.5;
+				var bg = '#1a1a2e'; var phase = 'night';
+				if (fh >= dawnStart && fh < dawnEnd) { bg = '#ffecd2'; phase = 'dawn'; }
+				else if (fh >= dawnEnd && fh < duskStart) { bg = '#f0f4f0'; phase = 'day'; }
+				else if (fh >= duskStart && fh < duskEnd) { bg = '#d1c4e9'; phase = 'dusk'; }
+				document.documentElement.dataset.phase = phase;
+				document.documentElement.style.cssText = 'background:' + bg + ' !important';
+				console.log('[theme:inline] phase=' + phase + ' fh=' + fh.toFixed(2) + ' sr=' + sr.toFixed(2) + ' ss=' + ss.toFixed(2));
+				document.addEventListener('DOMContentLoaded', function() {
+					document.body.style.background = bg;
+					console.log('[theme:DOMContentLoaded] html.dataset.phase=' + document.documentElement.dataset.phase);
+				});
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

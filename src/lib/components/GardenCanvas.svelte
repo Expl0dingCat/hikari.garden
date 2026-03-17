@@ -4,6 +4,7 @@
 	import { monthEntries, selectedFlower, currentMonth, availableMonths, titleWaveTrigger, pendingDeepLink } from '$lib/stores/garden.js';
 	import { get } from 'svelte/store';
 	import type { JournalEntry } from '$lib/types.js';
+	import { generateHaiku } from '$lib/engine/HaikuGenerator.js';
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
 
@@ -52,7 +53,12 @@
 					whisperText = null;
 					if (whisperTimer) clearTimeout(whisperTimer);
 					whisperTimer = setTimeout(() => {
-						if (entry.text) {
+						// 1% chance: flower whispers a haiku instead
+						const dayHash = Math.floor(Date.now() / 86400000);
+						const roll = ((entry.flowerSeed * 31 + dayHash) % 100);
+						if (roll === 0) {
+							whisperText = generateHaiku(entry.mood, entry.flowerSeed);
+						} else if (entry.text) {
 							// Take first sentence or first 60 chars
 							const raw = entry.text.replace(/[#*_~`>\[\]]/g, '').trim();
 							const firstSentence = raw.split(/[.!?\n]/)[0]?.trim();
@@ -187,6 +193,7 @@
 		position: fixed;
 		inset: 0;
 		z-index: 0;
+		background: inherit;
 	}
 	canvas {
 		width: 100%;

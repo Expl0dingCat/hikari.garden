@@ -3,7 +3,6 @@
 	import { fade, fly } from 'svelte/transition';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
-	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { marked } from 'marked';
 	import { mulberry32 } from '$lib/generation/SeededRandom.js';
 	import { env } from '$env/dynamic/public';
@@ -34,7 +33,6 @@
 	let flowerSideEl: HTMLDivElement;
 	let textSideHeight = $state('auto');
 
-	const themeStyle = getUIThemeStyle();
 	const FLOWER_SCALE = 5;
 
 	const weatherSvgs: Record<string, string> = {
@@ -277,26 +275,6 @@
 		starring = false;
 	}
 
-	function encodeMood(mood: import('$lib/types.js').MoodVector): string {
-		const vals = [mood.joy, mood.energy, mood.tenderness, mood.clarity, mood.hope];
-		return vals.map(v => Math.round(v * 99).toString(16).padStart(2, '0')).join('');
-	}
-
-	let seedCopied = $state(false);
-	let seedCopiedTimer: ReturnType<typeof setTimeout> | null = null;
-
-	async function handleCopySeed() {
-		if (!entry) return;
-		const code = encodeMood(entry.mood);
-		const url = `${window.location.origin}/seed/${code}`;
-		try {
-			await navigator.clipboard.writeText(url);
-			seedCopied = true;
-			if (seedCopiedTimer) clearTimeout(seedCopiedTimer);
-			seedCopiedTimer = setTimeout(() => { seedCopied = false; }, 2000);
-		} catch {}
-	}
-
 	async function handleCopyLink() {
 		if (!entry) return;
 		const url = `${window.location.origin}/flower/${entry.id}`;
@@ -306,6 +284,56 @@
 			if (linkCopiedTimer) clearTimeout(linkCopiedTimer);
 			linkCopiedTimer = setTimeout(() => { linkCopied = false; }, 2000);
 		} catch {}
+	}
+
+	function exportFlowerCard() {
+		if (!entry) return;
+		const dna = generateFlowerDNA(entry.mood, entry.flowerSeed);
+		const rendered = renderFlower(dna);
+		const scale = 8;
+		const cardW = 400;
+		const cardH = 480;
+		const c = document.createElement('canvas');
+		c.width = cardW;
+		c.height = cardH;
+		const ctx = c.getContext('2d')!;
+
+		// Background gradient from petal colors
+		const color1 = dna.petalColors[0];
+		const color2 = dna.petalColors[1];
+		const grad = ctx.createRadialGradient(cardW / 2, cardH * 0.4, 40, cardW / 2, cardH * 0.4, cardW * 0.7);
+		grad.addColorStop(0, color1 + '40');
+		grad.addColorStop(1, color2 + '15');
+		ctx.fillStyle = '#1a1a2e';
+		ctx.fillRect(0, 0, cardW, cardH);
+		ctx.fillStyle = grad;
+		ctx.fillRect(0, 0, cardW, cardH);
+
+		// Render flower pixels
+		const fw = rendered.width * scale;
+		const fh = rendered.height * scale;
+		const fx = (cardW - fw) / 2;
+		const fy = 30;
+		const imgData = ctx.createImageData(rendered.width, rendered.height);
+		imgData.data.set(rendered.pixels);
+		const tmpC = document.createElement('canvas');
+		tmpC.width = rendered.width;
+		tmpC.height = rendered.height;
+		tmpC.getContext('2d')!.putImageData(imgData, 0, 0);
+		ctx.imageSmoothingEnabled = false;
+		ctx.drawImage(tmpC, fx, fy, fw, fh);
+
+		// Flower name
+		ctx.font = '20px "Darumadrop One", cursive';
+		ctx.fillStyle = 'rgba(255,255,255,0.85)';
+		ctx.textAlign = 'center';
+		ctx.fillText(entry.flowerName, cardW / 2, cardH - 40);
+
+		// Download
+		const a = document.createElement('a');
+		a.href = c.toDataURL('image/png');
+		a.download = `${entry.flowerName.replace(/[^a-zA-Z0-9]/g, '-')}.png`;
+		a.click();
 	}
 
 	function close() {
@@ -347,6 +375,25 @@
 		return null;
 	}
 
+	function flowerAge(dateStr: string): string {
+		const all = $entries;
+		const isFirst = all.length > 0 && all.reduce((oldest, e) => e.date < oldest.date ? e : oldest).id === entry?.id;
+		if (isFirst && all.length > 1) return 'the first flower in the garden';
+		const entryDate = new Date(dateStr + 'T00:00:00');
+		const now = new Date();
+		const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const diffDays = Math.round((todayMidnight.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+		if (diffDays <= 0) return 'planted today';
+		if (diffDays === 1) return 'planted yesterday';
+		if (diffDays < 30) return `${diffDays} days old`;
+		const months = Math.floor(diffDays / 30.44);
+		if (months < 12) return `${months} month${months === 1 ? '' : 's'} old`;
+		const years = Math.floor(months / 12);
+		const rem = months % 12;
+		if (rem === 0) return `growing for ${years} year${years === 1 ? '' : 's'}`;
+		return `growing for ${years} year${years === 1 ? '' : 's'} and ${rem} month${rem === 1 ? '' : 's'}`;
+	}
+
 	function formatTimeOwner(createdAt: number): string {
 		const t = new Date(createdAt);
 		return t.toLocaleTimeString('en-US', {
@@ -376,7 +423,7 @@
 {#if visible && entry}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="overlay" style="{themeStyle};cursor:{$cursorDefault};--link-color:{petalColor};--cursor-pointer:{$cursorPointer}" transition:fade={{ duration: 300 }} onclick={close}>
+	<div class="overlay" style="cursor:{$cursorDefault};--link-color:{petalColor};--cursor-pointer:{$cursorPointer}" transition:fade={{ duration: 300 }} onclick={close}>
 		<div class="reveal-card" transition:fly={{ y: 30, duration: 400 }} onclick={(e) => e.stopPropagation()}>
 			<div class="top-bar">
 				<span class="top-date">{formatDateLine(entry.date)}</span>
@@ -415,6 +462,7 @@
 						></canvas>
 					</div>
 					<div class="flower-name">{entry.flowerName}</div>
+					<div class="flower-age">{flowerAge(entry.date)}</div>
 
 					<div class="mood-bars">
 						{#each moodAxes as axis}
@@ -498,14 +546,9 @@
 						share flower
 					{/if}
 				</button>
-				<button class="share-btn" onclick={handleCopySeed}>
-					{#if seedCopied}
-						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-						copied
-					{:else}
-						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c1-3.3 4-6 4-10a4 4 0 0 0-8 0c0 4 3 6.7 4 10z"/></svg>
-						share seed
-					{/if}
+				<button class="share-btn" onclick={exportFlowerCard}>
+					<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+					save flower
 				</button>
 			</div>
 		</div>
@@ -708,7 +751,7 @@
 		margin-bottom: 8px;
 		border-radius: 12px;
 		overflow: hidden;
-		background: rgba(0, 0, 0, 0.2);
+		background: var(--ui-flower-bg, rgba(30, 25, 18, 0.45));
 		padding: 12px;
 	}
 
@@ -736,6 +779,14 @@
 		letter-spacing: 1px;
 		text-align: center;
 		color: var(--ui-text);
+		margin-bottom: 2px;
+	}
+
+	.flower-age {
+		font-size: 12px;
+		text-align: center;
+		color: var(--ui-text-muted);
+		letter-spacing: 0.5px;
 		margin-bottom: 14px;
 	}
 
@@ -747,7 +798,7 @@
 		border-radius: 6px;
 		border: none;
 		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
-		color: rgba(255, 255, 255, 0.7);
+		color: var(--ui-text-muted);
 		font-family: inherit;
 		font-size: 12px;
 		line-height: 1;
@@ -762,13 +813,13 @@
 	}
 	.smell-btn:hover:not(:disabled) {
 		background: var(--ui-divider);
-		color: rgba(255, 255, 255, 0.9);
+		color: var(--ui-text);
 	}
 	.smell-btn:active:not(:disabled) {
 		transform: scale(0.95);
 	}
 	.smell-btn.smelled {
-		color: rgba(255, 255, 255, 0.9);
+		color: var(--ui-text-soft);
 		cursor: default;
 	}
 	.smell-btn:disabled:not(.smelled) {
@@ -787,7 +838,7 @@
 		border-radius: 6px;
 		border: none;
 		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
-		color: rgba(255, 255, 255, 0.5);
+		color: var(--ui-text-muted);
 		cursor: var(--cursor-pointer, pointer);
 		transition: background 0.2s, color 0.2s, transform 0.15s;
 		flex-shrink: 0;
@@ -795,13 +846,13 @@
 	}
 	.star-btn:hover:not(:disabled) {
 		background: var(--ui-divider);
-		color: rgba(255, 200, 50, 0.9);
+		color: rgb(200, 160, 30);
 	}
 	.star-btn:active:not(:disabled) {
 		transform: scale(0.95);
 	}
 	.star-btn.starred {
-		color: rgba(255, 200, 50, 0.9);
+		color: rgb(200, 160, 30);
 	}
 	.star-btn:disabled:not(.starred) {
 		opacity: 0.5;

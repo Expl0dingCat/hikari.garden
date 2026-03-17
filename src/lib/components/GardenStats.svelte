@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
 	import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
-	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
 	import { selectedFlower, currentMonth } from '$lib/stores/garden.js';
@@ -23,8 +22,6 @@
 	}
 
 	let heading = $derived(isAdmin ? 'your garden' : `${ownerName}'s garden`);
-
-	const themeStyle = getUIThemeStyle();
 
 	let flowerCanvas: HTMLCanvasElement;
 
@@ -123,7 +120,7 @@
 
 	function formatDateShort(dateStr: string): string {
 		const d = new Date(dateStr + 'T00:00:00');
-		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
 	// Render the average mood flower (cropped to flower head, fit in square)
@@ -170,6 +167,58 @@
 		}
 	});
 
+	// Mood calendar heatmap
+	let showCalendar = $state(false);
+	const initMonth = (() => {
+		const now = new Date();
+		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+	})();
+	let calendarMonth = $state(initMonth);
+
+	let calendarData = $derived.by(() => {
+		const month = calendarMonth;
+		const [yearStr, monthStr] = month.split('-');
+		const year = parseInt(yearStr);
+		const mo = parseInt(monthStr);
+		const firstDay = new Date(year, mo - 1, 1);
+		const daysInMonth = new Date(year, mo, 0).getDate();
+		const startDow = firstDay.getDay(); // 0=Sun
+
+		// Map entries for this month
+		const entryMap = new Map<number, JournalEntry>();
+		for (const e of entries) {
+			if (e.date.startsWith(month + '-')) {
+				const day = parseInt(e.date.slice(8));
+				if (!entryMap.has(day)) entryMap.set(day, e);
+			}
+		}
+
+		// Get petal color for each entry
+		const colorMap = new Map<number, string>();
+		for (const [day, e] of entryMap) {
+			const dna = generateFlowerDNA(e.mood, e.flowerSeed);
+			colorMap.set(day, dna.petalColors[0]);
+		}
+
+		return { year, mo, daysInMonth, startDow, entryMap, colorMap };
+	});
+
+	function calendarPrev() {
+		const [y, m] = calendarMonth.split('-').map(Number);
+		calendarMonth = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+	}
+
+	function calendarNext() {
+		const [y, m] = calendarMonth.split('-').map(Number);
+		calendarMonth = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+	}
+
+	function calendarMonthLabel(): string {
+		const [y, m] = calendarMonth.split('-').map(Number);
+		const d = new Date(y, m - 1, 1);
+		return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') onclose();
 	}
@@ -179,7 +228,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="overlay" style="{themeStyle};cursor:{$cursorDefault};--cursor-pointer:{$cursorPointer}" transition:fade={{ duration: 200 }} onclick={onclose}>
+<div class="overlay" style="cursor:{$cursorDefault};--cursor-pointer:{$cursorPointer}" transition:fade={{ duration: 200 }} onclick={onclose}>
 	<div class="card" transition:fly={{ y: 20, duration: 300 }} onclick={(e) => e.stopPropagation()}>
 		<button class="close-btn" onclick={onclose}>&times;</button>
 
@@ -197,7 +246,10 @@
 			</div>
 
 			<div class="mood-section">
-				<span class="section-label">average mood</span>
+				<button class="section-label-btn" onclick={() => (showCalendar = !showCalendar)}>
+					<span class="section-label">average mood</span>
+					<span class="calendar-toggle">{showCalendar ? 'hide calendar' : 'calendar'}</span>
+				</button>
 				<div class="mood-bars">
 					{#each moodAxes as axis}
 						<div class="mood-row">
@@ -211,6 +263,39 @@
 						</div>
 					{/each}
 				</div>
+				{#if showCalendar && calendarData}
+					<div class="calendar-section" transition:fly={{ y: -8, duration: 200 }}>
+						<div class="calendar-header">
+							<button class="cal-arrow" onclick={calendarPrev}>&lsaquo;</button>
+							<span class="cal-month">{calendarMonthLabel()}</span>
+							<button class="cal-arrow" onclick={calendarNext}>&rsaquo;</button>
+						</div>
+						<div class="cal-grid">
+							{#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as dow}
+								<span class="cal-dow">{dow}</span>
+							{/each}
+							{#each Array(calendarData.startDow) as _}
+								<span class="cal-empty"></span>
+							{/each}
+							{#each Array(calendarData.daysInMonth) as _, i}
+								{@const day = i + 1}
+								{@const cEntry = calendarData.entryMap.get(day)}
+								{@const color = calendarData.colorMap.get(day)}
+								{#if cEntry}
+									<button
+										class="cal-day has-entry"
+										style="background: {color}; color: #fff;"
+										onclick={() => goToFlower(cEntry)}
+									>
+										{day}
+									</button>
+								{:else}
+									<span class="cal-day">{day}</span>
+								{/if}
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<div class="divider"></div>
@@ -291,6 +376,8 @@
 		padding: 28px 24px 24px;
 		width: 340px;
 		max-width: 100%;
+		max-height: calc(100vh - 48px);
+		overflow-y: auto;
 		box-shadow: var(--ui-shadow);
 		color: var(--ui-text);
 	}
@@ -389,7 +476,6 @@
 		letter-spacing: 1.5px;
 		color: var(--ui-text-muted);
 		display: block;
-		margin-bottom: 10px;
 	}
 
 	.mood-bars {
@@ -546,6 +632,106 @@
 		font-family: 'Darumadrop One', cursive;
 		font-size: 14px;
 		color: var(--ui-text-muted);
+	}
+
+	.section-label-btn {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		width: 100%;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: var(--cursor-pointer, pointer);
+		margin-bottom: 10px;
+	}
+
+	.calendar-toggle {
+		font-family: 'Darumadrop One', cursive;
+		font-size: 10px;
+		letter-spacing: 1px;
+		color: var(--ui-text-muted);
+		opacity: 0.7;
+		transition: opacity 0.2s;
+	}
+	.section-label-btn:hover .calendar-toggle {
+		opacity: 1;
+	}
+
+	.calendar-section {
+		margin-top: 10px;
+	}
+
+	.calendar-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 10px;
+	}
+
+	.cal-month {
+		font-family: 'Darumadrop One', cursive;
+		font-size: 13px;
+		letter-spacing: 1px;
+		color: var(--ui-text-soft);
+	}
+
+	.cal-arrow {
+		background: none;
+		border: none;
+		color: var(--ui-text-muted);
+		font-size: 18px;
+		cursor: var(--cursor-pointer, pointer);
+		padding: 2px 8px;
+		border-radius: 6px;
+		transition: background 0.2s, color 0.2s;
+	}
+	.cal-arrow:hover {
+		background: var(--ui-bar-bg, rgba(255,255,255,0.06));
+		color: var(--ui-text);
+	}
+
+	.cal-grid {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 3px;
+		text-align: center;
+	}
+
+	.cal-dow {
+		font-family: 'Darumadrop One', cursive;
+		font-size: 10px;
+		color: var(--ui-text-muted);
+		letter-spacing: 0.5px;
+		padding-bottom: 4px;
+	}
+
+	.cal-empty {
+		aspect-ratio: 1;
+	}
+
+	.cal-day {
+		aspect-ratio: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-family: 'Darumadrop One', cursive;
+		font-size: 11px;
+		color: var(--ui-text-muted);
+		border-radius: 6px;
+	}
+
+	.cal-day.has-entry {
+		background: none;
+		border: none;
+		cursor: var(--cursor-pointer, pointer);
+		font-weight: 400;
+		text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+		transition: transform 0.15s, box-shadow 0.15s;
+	}
+	.cal-day.has-entry:hover {
+		transform: scale(1.15);
+		box-shadow: 0 0 6px rgba(255,255,255,0.15);
 	}
 
 	@media (max-width: 600px) {

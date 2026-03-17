@@ -1,3 +1,5 @@
+import { getSolarTimes } from './SolarTimes.js';
+
 export type TimePhase = 'dawn' | 'day' | 'dusk' | 'night';
 
 export interface TimeTheme {
@@ -49,11 +51,24 @@ const themes: Record<TimePhase, TimeTheme> = {
 	}
 };
 
+/** Compute phase boundaries from solar times */
+function getPhaseBounds() {
+	const solar = getSolarTimes();
+	const dawnStart = solar.sunrise - 0.5;
+	const dawnEnd = solar.sunrise + 1;
+	const duskStart = solar.sunset - 1;
+	const duskEnd = solar.sunset + 0.5;
+	return { dawnStart, dawnEnd, duskStart, duskEnd };
+}
+
 export function getTimePhase(hour?: number): TimePhase {
 	const h = hour ?? new Date().getHours();
-	if (h >= 5 && h < 8) return 'dawn';
-	if (h >= 8 && h < 17) return 'day';
-	if (h >= 17 && h < 20) return 'dusk';
+	const m = hour !== undefined ? 0 : new Date().getMinutes();
+	const fh = h + m / 60;
+	const { dawnStart, dawnEnd, duskStart, duskEnd } = getPhaseBounds();
+	if (fh >= dawnStart && fh < dawnEnd) return 'dawn';
+	if (fh >= dawnEnd && fh < duskStart) return 'day';
+	if (fh >= duskStart && fh < duskEnd) return 'dusk';
 	return 'night';
 }
 
@@ -181,13 +196,13 @@ export function getOverlayThemeStyle(): string {
 	const m = new Date().getMinutes();
 	const fh = h + m / 60;
 
-	// Phase boundaries: dawn 5-8, day 8-17, dusk 17-20, night 20-5
-	// Blend during last hour of each phase
+	// Solar-derived phase boundaries with 1-hour blend zones at transitions
+	const { dawnStart, dawnEnd, duskStart, duskEnd } = getPhaseBounds();
 	const transitions: { start: number; end: number; from: TimePhase; to: TimePhase }[] = [
-		{ start: 7, end: 8, from: 'dawn', to: 'day' },
-		{ start: 16, end: 17, from: 'day', to: 'dusk' },
-		{ start: 19, end: 20, from: 'dusk', to: 'night' },
-		{ start: 4, end: 5, from: 'night', to: 'dawn' },
+		{ start: dawnEnd - 1, end: dawnEnd, from: 'dawn', to: 'day' },
+		{ start: duskStart - 1, end: duskStart, from: 'day', to: 'dusk' },
+		{ start: duskEnd - 1, end: duskEnd, from: 'dusk', to: 'night' },
+		{ start: dawnStart - 1, end: dawnStart, from: 'night', to: 'dawn' },
 	];
 
 	let fromPhase: TimePhase = getTimePhase(h);
@@ -251,6 +266,7 @@ export function getUIThemeStyle(): string {
 			'ui-cancel': 'rgba(120, 80, 40, 0.5)',
 			'ui-cancel-hover': 'rgba(120, 80, 40, 0.15)',
 			'ui-icon-filter': 'invert(0.3) sepia(0.5) hue-rotate(340deg)',
+			'ui-flower-bg': 'rgba(60, 40, 20, 0.4)',
 		},
 		day: {
 			'ui-card': 'rgba(255, 255, 255, 0.93)',
@@ -273,6 +289,7 @@ export function getUIThemeStyle(): string {
 			'ui-cancel': 'rgba(50, 80, 50, 0.45)',
 			'ui-cancel-hover': 'rgba(0, 0, 0, 0.06)',
 			'ui-icon-filter': 'invert(0.4)',
+			'ui-flower-bg': 'rgba(40, 55, 30, 0.35)',
 		},
 		dusk: {
 			'ui-card': 'rgba(50, 38, 65, 0.93)',
@@ -295,6 +312,7 @@ export function getUIThemeStyle(): string {
 			'ui-cancel': 'rgba(200, 170, 220, 0.5)',
 			'ui-cancel-hover': 'rgba(160, 100, 200, 0.15)',
 			'ui-icon-filter': 'invert(0.8) sepia(0.2) hue-rotate(220deg)',
+			'ui-flower-bg': 'rgba(30, 20, 40, 0.45)',
 		},
 		night: {
 			'ui-card': 'rgba(16, 20, 36, 0.94)',
@@ -317,6 +335,7 @@ export function getUIThemeStyle(): string {
 			'ui-cancel': 'rgba(130, 150, 180, 0.5)',
 			'ui-cancel-hover': 'rgba(60, 140, 130, 0.15)',
 			'ui-icon-filter': 'invert(0.75) sepia(0.15) hue-rotate(170deg)',
+			'ui-flower-bg': 'rgba(10, 15, 25, 0.45)',
 		},
 	};
 
@@ -330,19 +349,20 @@ export function getBlendedTheme(hour?: number): TimeTheme {
 	const m = new Date().getMinutes();
 	const fractionalHour = h + m / 60;
 
-	// Transition boundaries with 1-hour blend zones
+	// Solar-derived transition boundaries with 1-hour blend zones
+	const { dawnStart, dawnEnd, duskStart, duskEnd } = getPhaseBounds();
 	const phases: { start: number; end: number; phase: TimePhase }[] = [
-		{ start: 5, end: 8, phase: 'dawn' },
-		{ start: 8, end: 17, phase: 'day' },
-		{ start: 17, end: 20, phase: 'dusk' },
-		{ start: 20, end: 29, phase: 'night' } // wraps past midnight
+		{ start: dawnStart, end: dawnEnd, phase: 'dawn' },
+		{ start: dawnEnd, end: duskStart, phase: 'day' },
+		{ start: duskStart, end: duskEnd, phase: 'dusk' },
+		{ start: duskEnd, end: dawnStart + 24, phase: 'night' } // wraps past midnight
 	];
 
 	// Find current and next phase
 	for (let i = 0; i < phases.length; i++) {
 		const p = phases[i];
 		const next = phases[(i + 1) % phases.length];
-		const fh = fractionalHour < 5 ? fractionalHour + 24 : fractionalHour;
+		const fh = fractionalHour < dawnStart ? fractionalHour + 24 : fractionalHour;
 
 		if (fh >= p.start && fh < p.end) {
 			// Check if we're in a transition zone (last hour of phase)
@@ -366,4 +386,16 @@ export function getBlendedTheme(hour?: number): TimeTheme {
 	}
 
 	return themes.night;
+}
+
+/** Update the data-phase attribute on <html> to match current time.
+ *  Called on mount and periodically to keep theme in sync. */
+export function updateDocumentPhase(): TimePhase {
+	const phase = getTimePhase();
+	if (typeof document !== 'undefined') {
+		const prev = document.documentElement.dataset.phase;
+		document.documentElement.dataset.phase = phase;
+		console.log('[theme:updateDocumentPhase] phase=' + phase + ' prev=' + prev + ' h=' + new Date().getHours() + ':' + new Date().getMinutes());
+	}
+	return phase;
 }

@@ -5,7 +5,6 @@
 	import DatePicker from './DatePicker.svelte';
 	import SongPicker from './SongPicker.svelte';
 	import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
-	import { getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { hashString } from '$lib/generation/SeededRandom.js';
 
 	import type { Weather } from '$lib/types.js';
@@ -39,8 +38,6 @@
 	let imageFiles = $state<File[]>([]);
 	let imagePreviews = $state<string[]>([]);
 	let fileInput: HTMLInputElement;
-
-	const themeStyle = getUIThemeStyle();
 
 	// Fetch weather on mount via IP geolocation (no browser prompt)
 	$effect(() => {
@@ -138,7 +135,7 @@
 	}
 </script>
 
-<div class="editor" style="{themeStyle};cursor:{$cursorDefault};--cursor-pointer:{$cursorPointer}">
+<div class="editor" style="cursor:{$cursorDefault};--cursor-pointer:{$cursorPointer}">
 	<div class="top-bar">
 		<input
 			bind:value={title}

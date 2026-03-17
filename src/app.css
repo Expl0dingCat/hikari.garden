@@ -1,0 +1,155 @@
+/* ─── Time-of-day theme CSS variables ───
+ * Set by data-phase attribute on <html>, computed in app.html inline script.
+ * Updated at runtime by TimeOfDay.updateDocumentPhase(). */
+
+/* ═══ Night ═══ */
+html[data-phase="night"] {
+  --overlay-text: rgba(255, 255, 255, 0.7);
+  --overlay-text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  --overlay-btn-bg: rgba(255, 255, 255, 0.15);
+  --overlay-btn-hover: rgba(255, 255, 255, 0.25);
+  --overlay-btn-ghost-hover: rgba(255, 255, 255, 0.1);
+  --overlay-month-text: rgba(255, 255, 255, 0.8);
+  --overlay-month-bg: rgba(255, 255, 255, 0.1);
+  --overlay-arrow: rgba(255, 255, 255, 0.6);
+  --overlay-arrow-hover-bg: rgba(255, 255, 255, 0.15);
+  --overlay-arrow-hover: rgba(255, 255, 255, 0.9);
+  --overlay-welcome: rgba(255, 255, 255, 0.85);
+  --overlay-welcome-shadow: 0 0 30px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.4);
+  --overlay-empty: rgba(255, 255, 255, 0.4);
+  --ui-card: rgba(16, 20, 36, 0.94);
+  --ui-card-border: rgba(80, 180, 170, 0.12);
+  --ui-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --ui-text: #c0c8d8;
+  --ui-text-soft: #8898b0;
+  --ui-text-muted: rgba(130, 150, 180, 0.45);
+  --ui-input: rgba(25, 30, 50, 0.5);
+  --ui-input-border: rgba(60, 140, 130, 0.15);
+  --ui-input-focus: rgba(80, 180, 170, 0.25);
+  --ui-accent: #50a8a0;
+  --ui-accent-hover: #60b8b0;
+  --ui-glow: rgba(80, 200, 180, 0.12);
+  --ui-divider: rgba(80, 120, 140, 0.12);
+  --ui-tag: rgba(60, 160, 150, 0.12);
+  --ui-tag-text: #70b0a8;
+  --ui-overlay: rgba(5, 8, 15, 0.6);
+  --ui-bar-bg: rgba(60, 120, 140, 0.1);
+  --ui-cancel: rgba(130, 150, 180, 0.5);
+  --ui-cancel-hover: rgba(60, 140, 130, 0.15);
+  --ui-icon-filter: invert(0.75) sepia(0.15) hue-rotate(170deg);
+  --ui-flower-bg: rgba(10, 15, 25, 0.45);
+}
+
+/* ═══ Dawn ═══ */
+html[data-phase="dawn"] {
+  --overlay-text: rgba(100, 60, 30, 0.6);
+  --overlay-text-shadow: none;
+  --overlay-btn-bg: rgba(100, 60, 20, 0.08);
+  --overlay-btn-hover: rgba(100, 60, 20, 0.14);
+  --overlay-btn-ghost-hover: rgba(100, 60, 20, 0.08);
+  --overlay-month-text: rgba(100, 60, 30, 0.7);
+  --overlay-month-bg: rgba(100, 60, 20, 0.08);
+  --overlay-arrow: rgba(100, 60, 30, 0.5);
+  --overlay-arrow-hover-bg: rgba(100, 60, 20, 0.1);
+  --overlay-arrow-hover: rgba(100, 60, 30, 0.8);
+  --overlay-welcome: rgba(100, 60, 30, 0.7);
+  --overlay-welcome-shadow: 0 1px 8px rgba(255, 245, 230, 0.4);
+  --overlay-empty: rgba(100, 60, 30, 0.4);
+  --ui-card: rgba(255, 245, 232, 0.92);
+  --ui-card-border: rgba(220, 160, 100, 0.2);
+  --ui-shadow: 0 20px 60px rgba(150, 80, 30, 0.2);
+  --ui-text: #4a3520;
+  --ui-text-soft: #7a5a3a;
+  --ui-text-muted: rgba(120, 80, 40, 0.45);
+  --ui-input: rgba(255, 248, 238, 0.5);
+  --ui-input-border: rgba(200, 150, 100, 0.2);
+  --ui-input-focus: rgba(230, 140, 80, 0.35);
+  --ui-accent: #d8845a;
+  --ui-accent-hover: #c0724a;
+  --ui-glow: rgba(255, 180, 100, 0.25);
+  --ui-divider: rgba(180, 120, 60, 0.12);
+  --ui-tag: rgba(220, 150, 80, 0.12);
+  --ui-tag-text: #8a5530;
+  --ui-overlay: rgba(60, 30, 15, 0.5);
+  --ui-bar-bg: rgba(180, 120, 60, 0.1);
+  --ui-cancel: rgba(120, 80, 40, 0.5);
+  --ui-cancel-hover: rgba(120, 80, 40, 0.15);
+  --ui-icon-filter: invert(0.3) sepia(0.5) hue-rotate(340deg);
+  --ui-flower-bg: rgba(60, 40, 20, 0.4);
+}
+
+/* ═══ Day ═══ */
+html[data-phase="day"] {
+  --overlay-text: rgba(40, 60, 40, 0.55);
+  --overlay-text-shadow: none;
+  --overlay-btn-bg: rgba(0, 0, 0, 0.06);
+  --overlay-btn-hover: rgba(0, 0, 0, 0.1);
+  --overlay-btn-ghost-hover: rgba(0, 0, 0, 0.06);
+  --overlay-month-text: rgba(40, 60, 40, 0.65);
+  --overlay-month-bg: rgba(0, 0, 0, 0.05);
+  --overlay-arrow: rgba(40, 60, 40, 0.5);
+  --overlay-arrow-hover-bg: rgba(0, 0, 0, 0.06);
+  --overlay-arrow-hover: rgba(40, 60, 40, 0.8);
+  --overlay-welcome: rgba(40, 60, 40, 0.65);
+  --overlay-welcome-shadow: 0 1px 8px rgba(255, 255, 255, 0.5);
+  --overlay-empty: rgba(40, 60, 40, 0.35);
+  --ui-card: rgba(255, 255, 255, 0.93);
+  --ui-card-border: rgba(100, 160, 100, 0.12);
+  --ui-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  --ui-text: #2a3a2a;
+  --ui-text-soft: #4a6a4a;
+  --ui-text-muted: rgba(50, 80, 50, 0.4);
+  --ui-input: rgba(240, 248, 240, 0.5);
+  --ui-input-border: rgba(100, 160, 100, 0.12);
+  --ui-input-focus: rgba(80, 160, 80, 0.25);
+  --ui-accent: #5a9e60;
+  --ui-accent-hover: #4a8e50;
+  --ui-glow: rgba(100, 180, 120, 0.12);
+  --ui-divider: rgba(0, 0, 0, 0.06);
+  --ui-tag: rgba(80, 150, 80, 0.08);
+  --ui-tag-text: #4a6a4a;
+  --ui-overlay: rgba(0, 0, 0, 0.35);
+  --ui-bar-bg: rgba(0, 0, 0, 0.04);
+  --ui-cancel: rgba(50, 80, 50, 0.45);
+  --ui-cancel-hover: rgba(0, 0, 0, 0.06);
+  --ui-icon-filter: invert(0.4);
+  --ui-flower-bg: rgba(40, 55, 30, 0.35);
+}
+
+/* ═══ Dusk ═══ */
+html[data-phase="dusk"] {
+  --overlay-text: rgba(255, 255, 255, 0.7);
+  --overlay-text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  --overlay-btn-bg: rgba(255, 255, 255, 0.15);
+  --overlay-btn-hover: rgba(255, 255, 255, 0.25);
+  --overlay-btn-ghost-hover: rgba(255, 255, 255, 0.1);
+  --overlay-month-text: rgba(255, 255, 255, 0.8);
+  --overlay-month-bg: rgba(255, 255, 255, 0.1);
+  --overlay-arrow: rgba(255, 255, 255, 0.6);
+  --overlay-arrow-hover-bg: rgba(255, 255, 255, 0.15);
+  --overlay-arrow-hover: rgba(255, 255, 255, 0.9);
+  --overlay-welcome: rgba(255, 255, 255, 0.85);
+  --overlay-welcome-shadow: 0 0 30px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.4);
+  --overlay-empty: rgba(255, 255, 255, 0.4);
+  --ui-card: rgba(50, 38, 65, 0.93);
+  --ui-card-border: rgba(180, 130, 200, 0.15);
+  --ui-shadow: 0 20px 60px rgba(30, 15, 50, 0.35);
+  --ui-text: #e0d0ea;
+  --ui-text-soft: #c0a8d0;
+  --ui-text-muted: rgba(200, 170, 220, 0.45);
+  --ui-input: rgba(70, 50, 90, 0.45);
+  --ui-input-border: rgba(150, 100, 180, 0.2);
+  --ui-input-focus: rgba(180, 130, 220, 0.35);
+  --ui-accent: #b070c8;
+  --ui-accent-hover: #c080d8;
+  --ui-glow: rgba(180, 120, 220, 0.2);
+  --ui-divider: rgba(180, 140, 200, 0.12);
+  --ui-tag: rgba(160, 100, 200, 0.15);
+  --ui-tag-text: #c0a0d0;
+  --ui-overlay: rgba(25, 15, 40, 0.55);
+  --ui-bar-bg: rgba(160, 120, 200, 0.1);
+  --ui-cancel: rgba(200, 170, 220, 0.5);
+  --ui-cancel-hover: rgba(160, 100, 200, 0.15);
+  --ui-icon-filter: invert(0.8) sepia(0.2) hue-rotate(220deg);
+  --ui-flower-bg: rgba(30, 20, 40, 0.45);
+}

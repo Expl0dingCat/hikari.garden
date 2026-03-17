@@ -6,19 +6,49 @@
 	import GardenStats from '$lib/components/GardenStats.svelte';
 	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries, titleWaveTrigger, STARRED_MONTH, selectedFlower, pendingDeepLink } from '$lib/stores/garden.js';
 	import { page } from '$app/stores';
-	import { getTimePhase, getUIThemeStyle, getOverlayThemeStyle } from '$lib/engine/TimeOfDay.js';
+	import { updateDocumentPhase, type TimePhase } from '$lib/engine/TimeOfDay.js';
+	import { initSolarTimes } from '$lib/engine/SolarTimes.js';
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
 	import type { MoodVector } from '$lib/types.js';
 	import { fade, fly } from 'svelte/transition';
+	import { onMount } from 'svelte';
 
 	const ownerName = env.PUBLIC_OWNER_NAME || 'hikari';
 	const isOriginal = env.PUBLIC_ORIGINAL === 'true';
 	const showHelpIcon = env.PUBLIC_SHOW_HELP === 'true';
+	const debugEnabled = env.PUBLIC_DEBUG === 'true';
 
-	const phase = getTimePhase();
-	const editorThemeStyle = getUIThemeStyle();
-	const overlayStyle = getOverlayThemeStyle();
+	// Phase for greeting text. data-phase on <html> (set in app.html inline script
+	// + updated here) drives all CSS vars via app.css selectors.
+	let phase = $state<TimePhase>('night');
+
+	onMount(() => {
+		phase = updateDocumentPhase();
+		console.log('[theme:onMount] phase=' + phase + ' html.dataset.phase=' + document.documentElement.dataset.phase);
+		// Fetch IP-based solar times; when resolved, re-update phase
+		initSolarTimes(() => { phase = updateDocumentPhase(); });
+		// Re-check phase every minute for natural transitions
+		const interval = setInterval(() => { phase = updateDocumentPhase(); }, 60000);
+		return () => clearInterval(interval);
+	});
+
+	// Returning visitor greeting
+	function getWelcomeMessage(): string {
+		if (typeof window === 'undefined') return `welcome to ${ownerName}'s garden`;
+		const lastVisit = localStorage.getItem('hikari-last-visit');
+		const now = Date.now();
+		// Store current visit for next time
+		setTimeout(() => localStorage.setItem('hikari-last-visit', String(now)), 5000);
+		if (!lastVisit) return `welcome to ${ownerName}'s garden`;
+		const days = (now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24);
+		if (days < 0.25) return `welcome back to ${ownerName}'s garden`;
+		if (days < 3) return `welcome back to ${ownerName}'s garden`;
+		if (days < 14) return `the garden missed you`;
+		if (days < 60) return `the flowers have been waiting`;
+		return `so much has grown since you were last here`;
+	}
+	const welcomeMessage = getWelcomeMessage();
 
 	let { data }: { data: PageData } = $props();
 
@@ -73,6 +103,40 @@
 			history.replaceState({}, '', '/');
 		}
 	});
+
+	// "On This Day" memory — show if entry was planted 1+ years ago today
+	let onThisDay = $state<{ entry: import('$lib/types.js').JournalEntry; yearsAgo: number } | null>(null);
+	$effect(() => {
+		const all = $entries;
+		if (all.length === 0) return;
+		if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hikari-otd-dismissed')) return;
+		const today = new Date();
+		const mm = String(today.getMonth() + 1).padStart(2, '0');
+		const dd = String(today.getDate()).padStart(2, '0');
+		const todaySuffix = `-${mm}-${dd}`;
+		for (const e of all) {
+			if (e.date.endsWith(todaySuffix) && e.date.slice(0, 4) !== String(today.getFullYear())) {
+				const years = today.getFullYear() - parseInt(e.date.slice(0, 4));
+				if (years >= 1) {
+					onThisDay = { entry: e, yearsAgo: years };
+					break;
+				}
+			}
+		}
+	});
+
+	function dismissOnThisDay() {
+		onThisDay = null;
+		sessionStorage.setItem('hikari-otd-dismissed', '1');
+	}
+
+	function visitOnThisDay() {
+		if (!onThisDay) return;
+		currentMonth.set(onThisDay.entry.date.slice(0, 7));
+		selectedFlower.set(onThisDay.entry);
+		onThisDay = null;
+		sessionStorage.setItem('hikari-otd-dismissed', '1');
+	}
 
 	async function handleSubmit(entry: { title: string; text: string; mood: MoodVector; date: string; tags: string[]; weather?: import('$lib/types.js').Weather; images?: string[]; song?: import('$lib/types.js').Song; flowerSeed?: number }) {
 		const res = await fetch('/api/entries', {
@@ -138,15 +202,47 @@
 		}
 	});
 
-	const greeting = phase === 'dawn' ? 'good morning' : phase === 'day' ? 'good afternoon' : phase === 'dusk' ? 'good evening' : 'goodnight';
-	const pageTitle = `${greeting}, ${ownerName}'s garden`;
+	let greeting = $derived(phase === 'dawn' ? 'good morning' : phase === 'day' ? 'good afternoon' : phase === 'dusk' ? 'good evening' : 'goodnight');
+	let pageTitle = $derived(`${greeting}, ${ownerName}'s garden`);
 
 	async function handleLogout() {
 		await fetch('/api/logout', { method: 'POST' });
 		isAdmin.set(false);
 	}
 
+	// ─── Debug Menu (Ctrl+Shift+D) ───
+	let showDebug = $state(false);
+	let timelapseDate = $state<string | null>(null);
+	let ceremonyText = $state<{ text: string; alpha: number }>({ text: '', alpha: 0 });
+
+	function handleGlobalKeydown(e: KeyboardEvent) {
+		if (debugEnabled && e.ctrlKey && e.shiftKey && e.key === 'D') {
+			e.preventDefault();
+			showDebug = !showDebug;
+		}
+	}
+
+	function getEngine() {
+		return gardenCanvas?.getEngine?.() ?? null;
+	}
+
+	// Wire up timelapse and ceremony text callbacks once engine is ready
+	$effect(() => {
+		const check = () => {
+			const eng = getEngine();
+			if (eng) {
+				eng.onTimelapseDate = (d: string | null) => { timelapseDate = d; };
+				eng.onCeremonyText = (t: string, a: number) => { ceremonyText = { text: t, alpha: a }; };
+			} else {
+				setTimeout(check, 500);
+			}
+		};
+		check();
+	});
+
 </script>
+
+<svelte:window onkeydown={handleGlobalKeydown} />
 
 <svelte:head>
 	<title>{pageTitle}</title>
@@ -156,13 +252,13 @@
 <FlowerReveal />
 
 {#if showWelcome}
-	<div class="welcome" style={overlayStyle} transition:fade={{ duration: 1200 }}>
-		<p in:fly={{ y: -20, duration: 1000, delay: 300 }}>welcome to {ownerName}'s garden</p>
+	<div class="welcome" transition:fade={{ duration: 1200 }}>
+		<p in:fly={{ y: -20, duration: 1000, delay: 300 }}>{welcomeMessage}</p>
 	</div>
 {/if}
 
 <!-- Floating UI -->
-<div class="ui-overlay" style="{overlayStyle};--cursor-pointer:{$cursorPointer}">
+<div class="ui-overlay" style="--cursor-pointer:{$cursorPointer}">
 	<div class="top-bar">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -229,7 +325,7 @@
 {#if showEditor}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="editor-overlay" style="{editorThemeStyle};cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
+	<div class="editor-overlay" style="cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
 		<div onclick={(e) => e.stopPropagation()}>
 			<JournalEditor onsubmit={handleSubmit} oncancel={() => (showEditor = false)} />
 		</div>
@@ -239,7 +335,7 @@
 {#if showHelp}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="help-overlay" style={editorThemeStyle} transition:fade={{ duration: 200 }} onclick={() => { showHelp = false; helpStep = 0; }}>
+	<div class="help-overlay" transition:fade={{ duration: 200 }} onclick={() => { showHelp = false; helpStep = 0; }}>
 		<div class="help-card" onclick={(e) => e.stopPropagation()}>
 			<button class="help-close" onclick={() => { showHelp = false; helpStep = 0; }}>&times;</button>
 
@@ -299,6 +395,50 @@
 	</div>
 {/if}
 
+{#if onThisDay}
+	<div class="on-this-day" transition:fly={{ y: 30, duration: 400 }}>
+		<span class="otd-text">
+			{onThisDay.yearsAgo === 1 ? 'one year' : `${onThisDay.yearsAgo} years`} ago today, you planted {onThisDay.entry.flowerName}
+		</span>
+		<button class="otd-visit" onclick={visitOnThisDay}>visit</button>
+		<button class="otd-close" onclick={dismissOnThisDay}>&times;</button>
+	</div>
+{/if}
+
+{#if ceremonyText.text && ceremonyText.alpha > 0}
+	<div class="ceremony-text" style="opacity: {ceremonyText.alpha}">
+		{ceremonyText.text}
+	</div>
+{/if}
+
+{#if timelapseDate}
+	<div class="timelapse-date" transition:fade={{ duration: 200 }}>
+		{new Date(timelapseDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+	</div>
+{/if}
+
+{#if debugEnabled && showDebug}
+	<div class="debug-panel" transition:fly={{ x: 200, duration: 200 }}>
+		<div class="debug-title">debug effects</div>
+		<div class="debug-hint">Ctrl+Shift+D to toggle</div>
+		<div class="debug-buttons">
+			<button onclick={() => getEngine()?.triggerTitleWave()}>title wave</button>
+			<button onclick={() => getEngine()?.debugPetalRain()}>petal rain</button>
+			<button onclick={() => getEngine()?.debugMidnightBloom()}>midnight bloom</button>
+			<button onclick={() => getEngine()?.debugMilestone()}>confetti</button>
+			<button onclick={() => getEngine()?.debugRainRipple()}>rain ripple</button>
+			<button onclick={() => getEngine()?.debugRainbow()}>rainbow</button>
+			<button onclick={() => getEngine()?.debugStarMode()}>star mode</button>
+			<button onclick={() => getEngine()?.debugAnniversary()}>anniversary glow</button>
+			<button onclick={() => getEngine()?.debugWindGust()}>wind gust</button>
+			<button onclick={() => getEngine()?.debugDew()}>morning dew</button>
+			<button onclick={() => getEngine()?.debugFirstFlower()}>first flower</button>
+			<button onclick={() => getEngine()?.startTimelapse()}>timelapse start</button>
+			<button onclick={() => getEngine()?.stopTimelapse()}>timelapse stop</button>
+			<button onclick={() => { const url = getEngine()?.exportImage(); if (url) { const a = document.createElement('a'); a.href = url; a.download = 'garden.png'; a.click(); } }}>export PNG</button>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.ui-overlay {
@@ -470,6 +610,64 @@
 		background: var(--ui-overlay);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
+	}
+
+	.on-this-day {
+		position: fixed;
+		bottom: 80px;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 15;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 16px;
+		border-radius: 12px;
+		background: var(--overlay-month-bg);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+		font-size: 13px;
+		color: var(--overlay-text);
+		white-space: nowrap;
+		pointer-events: auto;
+	}
+	.otd-text {
+		letter-spacing: 0.3px;
+	}
+	.otd-visit {
+		padding: 4px 12px;
+		border: none;
+		border-radius: 6px;
+		background: var(--overlay-btn-bg);
+		color: var(--overlay-text);
+		font-size: 12px;
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+	.otd-visit:hover {
+		background: var(--overlay-btn-hover);
+	}
+	.otd-close {
+		background: none;
+		border: none;
+		color: var(--overlay-text);
+		font-size: 16px;
+		cursor: pointer;
+		padding: 0 4px;
+		opacity: 0.5;
+		transition: opacity 0.2s;
+	}
+	.otd-close:hover {
+		opacity: 1;
+	}
+
+	@media (max-width: 600px) {
+		.on-this-day {
+			bottom: 60px;
+			font-size: 11px;
+			padding: 8px 12px;
+			gap: 6px;
+		}
 	}
 
 	@media (max-width: 600px) {
@@ -672,13 +870,92 @@
 		margin: 12px 20px 0 8px;
 		font-family: 'Mona Sans', sans-serif;
 		font-size: 12px;
-		color: var(--ui-text-muted);
+		color: var(--ui-text-soft);
 		text-decoration: none;
 		letter-spacing: 0.3px;
 		transition: color 0.2s;
 	}
 	.help-cta:hover {
 		color: var(--ui-text);
+	}
+
+	.ceremony-text {
+		position: fixed;
+		bottom: 35%;
+		left: 50%;
+		transform: translateX(-50%);
+		z-index: 50;
+		font-family: 'Darumadrop One', cursive;
+		font-size: 24px;
+		letter-spacing: 3px;
+		color: #ffd700;
+		text-shadow: 0 0 20px rgba(255, 215, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+		pointer-events: none;
+	}
+
+	.timelapse-date {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 50;
+		font-family: 'Darumadrop One', cursive;
+		font-size: 20px;
+		letter-spacing: 2px;
+		color: rgba(255, 255, 255, 0.7);
+		text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+		pointer-events: none;
+	}
+
+	.debug-panel {
+		position: fixed;
+		top: 60px;
+		right: 12px;
+		z-index: 1000;
+		background: rgba(0, 0, 0, 0.85);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 12px;
+		padding: 14px;
+		width: 180px;
+		backdrop-filter: blur(10px);
+	}
+
+	.debug-title {
+		font-family: 'Darumadrop One', cursive;
+		font-size: 14px;
+		color: rgba(255, 255, 255, 0.9);
+		letter-spacing: 1px;
+		margin-bottom: 4px;
+	}
+
+	.debug-hint {
+		font-size: 10px;
+		color: rgba(255, 255, 255, 0.35);
+		margin-bottom: 10px;
+	}
+
+	.debug-buttons {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.debug-buttons button {
+		font-family: 'Darumadrop One', cursive;
+		font-size: 11px;
+		letter-spacing: 0.5px;
+		padding: 5px 10px;
+		border: none;
+		border-radius: 6px;
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.75);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	.debug-buttons button:hover {
+		background: rgba(255, 255, 255, 0.18);
+		color: #fff;
 	}
 
 	@media (max-width: 600px) {

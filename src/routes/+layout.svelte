@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import { isAdmin } from '$lib/stores/garden.js';
 	import type { LayoutData } from './$types.js';
 
@@ -30,7 +31,7 @@
 	:global(body) {
 		font-family: 'Darumadrop One', cursive;
 		overflow: hidden;
-		background: #1a1a2e;
+		/* Initial background set by inline script in app.html to match time of day */
 		color: #333;
 	}
 

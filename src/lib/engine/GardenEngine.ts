@@ -15,6 +15,13 @@ import { MidnightBloom } from './MidnightBloom.js';
 import { TitleWave } from './TitleWave.js';
 import { IdleVisitors } from './IdleVisitors.js';
 import { AnniversaryGlow } from './AnniversaryGlow.js';
+import { StarField } from './StarField.js';
+import { WindSystem } from './WindSystem.js';
+import { DewDrops } from './DewDrops.js';
+import { Rainbow } from './Rainbow.js';
+import { StarMode } from './StarMode.js';
+import { FirstFlowerCeremony } from './FirstFlowerCeremony.js';
+import { getSolarTimes } from './SolarTimes.js';
 
 import { RainRipples } from './RainRipples.js';
 
@@ -51,6 +58,13 @@ export class GardenEngine {
 	private rainRipples: RainRipples;
 
 	private milestone: MilestoneCelebration;
+	private starField: StarField;
+	private windSystem: WindSystem;
+	private dewDrops: DewDrops;
+	private rainbow: Rainbow;
+	private starMode: StarMode;
+	private firstFlower: FirstFlowerCeremony;
+	private previousFlowerCount = 0;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
 
@@ -58,6 +72,12 @@ export class GardenEngine {
 	onFlowerHover: ((entry: JournalEntry | null, screenX: number, screenY: number) => void) | null = null;
 	onTodayFlowers: ((positions: { entry: JournalEntry; x: number; y: number }[]) => void) | null = null;
 	onLatestFlower: ((pos: { entry: JournalEntry; x: number; y: number } | null) => void) | null = null;
+	onCeremonyText: ((text: string, alpha: number) => void) | null = null;
+	onTimelapseDate: ((date: string | null) => void) | null = null;
+	private timelapseActive = false;
+	private timelapseTimer = 0;
+	private timelapseIndex = 0;
+	private timelapseFlowers: FlowerSprite[] = [];
 
 	constructor() {
 		this.app = new Application();
@@ -77,6 +97,12 @@ export class GardenEngine {
 		this.rainRipples = new RainRipples();
 
 		this.milestone = new MilestoneCelebration();
+		this.starField = new StarField();
+		this.windSystem = new WindSystem();
+		this.dewDrops = new DewDrops();
+		this.rainbow = new Rainbow();
+		this.starMode = new StarMode();
+		this.firstFlower = new FirstFlowerCeremony();
 		this.theme = getBlendedTheme();
 		this.camera = null!;
 	}
@@ -93,6 +119,7 @@ export class GardenEngine {
 			autoDensity: true
 		});
 
+		// Solar times use month-adjusted defaults (no geolocation prompt)
 		this.camera = new Camera(canvas, () => {});
 		this.cursors = generateCursors();
 		this.camera.setCursorProvider((type) =>
@@ -104,16 +131,18 @@ export class GardenEngine {
 		cursorDefault.set(this.cursors.default);
 		cursorPointer.set(this.cursors.pointer);
 
-		// Scene graph: background -> world (grass, flowers, idleVisitors, particles) -> shootingStars -> petalRain -> weather
+		// Scene graph: background -> starField -> world (grass, dew, flowers, idleVisitors, particles) -> shootingStars -> rainbow -> petalRain -> weather
 		this.app.stage.addChild(this.background);
+		this.app.stage.addChild(this.starField.getContainer());
 		this.app.stage.addChild(this.world);
 
 		this.app.stage.addChild(this.shootingStars.gfx);
+		this.app.stage.addChild(this.rainbow.gfx);
 		this.app.stage.addChild(this.petalRain.gfx);
-
 
 		this.app.stage.addChild(this.rainRipples.gfx);
 		this.app.stage.addChild(this.milestone.gfx);
+		this.app.stage.addChild(this.firstFlower.gfx);
 		this.app.stage.addChild(this.weather.container);
 
 		this.world.sortableChildren = true;
@@ -123,6 +152,10 @@ export class GardenEngine {
 		this.midnightBloom.container.zIndex = 4000;
 		this.world.addChild(this.idleVisitors.container);
 		this.idleVisitors.container.zIndex = 5000;
+		this.world.addChild(this.dewDrops.getContainer());
+		this.dewDrops.getContainer().zIndex = 3000;
+		this.world.addChild(this.starMode.gfx);
+		this.starMode.gfx.zIndex = 9000;
 		this.world.addChild(this.particles.container);
 		this.particles.container.zIndex = 10000;
 
@@ -143,12 +176,24 @@ export class GardenEngine {
 			this.midnightBloom.trigger(10);
 		});
 
+		// "stars" secret code → constellation mode
+		this.konamiCode.onStars(() => {
+			this.starMode.trigger();
+		});
+
+		// First flower ceremony text callback
+		this.firstFlower.onShowText = (text, alpha) => {
+			this.onCeremonyText?.(text, alpha);
+		};
+
 		// Fetch and apply current weather
 		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
 		fetchWeatherCondition().then((condition) => {
 			this.weather.setCondition(condition);
 			const isRaining = condition === 'rain' || condition === 'drizzle' || condition === 'showers' || condition === 'storm';
 			this.rainRipples.setRaining(isRaining);
+			this.windSystem.setWeather(condition);
+			this.rainbow.checkWeather(condition);
 		});
 	}
 
@@ -352,6 +397,12 @@ export class GardenEngine {
 			this.app.screen.height / this.camera.zoom
 		);
 
+		// First flower ceremony: 0→1 transition
+		if (!skipGrowIn) {
+			const screenCenter = this.worldToScreen(0, 0);
+			this.firstFlower.tryTrigger(this.previousFlowerCount, entries.length, screenCenter.x, screenCenter.y);
+		}
+		this.previousFlowerCount = entries.length;
 	}
 
 	private update(dt: number) {
@@ -364,9 +415,29 @@ export class GardenEngine {
 		);
 		this.world.scale.set(this.camera.zoom);
 
+		// Compute sleep factor for flowers (night = closed, dawn = waking)
+		const h = new Date().getHours();
+		const m = new Date().getMinutes();
+		const fh = h + m / 60;
+		const solar = getSolarTimes();
+		const duskEnd = solar.sunset + 0.5;
+		const dawnStart = solar.sunrise - 0.5;
+		let sleepFactor = 0;
+		if (fh >= duskEnd || fh < dawnStart - 1) sleepFactor = 1;         // deep night
+		else if (fh >= duskEnd - 1 && fh < duskEnd) sleepFactor = fh - (duskEnd - 1); // dusk → night
+		else if (fh < dawnStart) sleepFactor = 1;                         // still night
+		else if (fh < dawnStart + 1) sleepFactor = 1 - (fh - dawnStart); // dawn waking
+
+		this.windSystem.update(dt);
+
 		for (const flower of this.flowers) {
+			flower.sleepFactor = sleepFactor;
+			flower.windLean = this.windSystem.getFlowerLean(flower.dna.stemHeight);
 			flower.update(dt);
 		}
+
+		// Dew drops on flowers at dawn
+		this.dewDrops.update(dt, this.flowers);
 
 		// Easter egg systems
 		this.idleVisitors.update(dt, this.flowers);
@@ -374,14 +445,49 @@ export class GardenEngine {
 		this.titleWave.update(dt, this.flowers);
 		this.anniversaryGlow.update(dt, this.flowers);
 
-
 		this.rainRipples.update(dt);
+		this.starMode.update(dt, this.flowers);
 
 		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
 		this.milestone.update(dt);
 
+		this.firstFlower.setScreenSize(this.app.screen.width, this.app.screen.height);
+		this.firstFlower.update(dt);
+
+		// Timelapse replay
+		if (this.timelapseActive) {
+			this.timelapseTimer += dt;
+			const interval = 45; // frames between each flower (~0.75s at 60fps)
+			while (this.timelapseIndex < this.timelapseFlowers.length && this.timelapseTimer >= interval) {
+				this.timelapseTimer -= interval;
+				const f = this.timelapseFlowers[this.timelapseIndex];
+				f.setGrowIn(0);
+				this.onTimelapseDate?.(f.entry.date);
+				// Pan camera to follow
+				this.camera.focusOn(f.worldX, f.worldY, 1.0);
+				this.timelapseIndex++;
+			}
+			if (this.timelapseIndex >= this.timelapseFlowers.length) {
+				// Timelapse complete — wait a beat then finish
+				if (this.timelapseTimer > 120) {
+					this.timelapseActive = false;
+					this.timelapseFlowers = [];
+					this.onTimelapseDate?.(null);
+				}
+			}
+		}
+
 		const screenW = this.app.screen.width;
 		const screenH = this.app.screen.height;
+
+		// Stars behind everything — visible at night
+		this.starField.setScreenSize(screenW, screenH);
+		this.starField.update(dt, sleepFactor);
+
+		// Rainbow (triggered by rain→clear transition)
+		this.rainbow.setScreenSize(screenW, screenH);
+		this.rainbow.update(dt);
+
 		this.shootingStars.setScreenSize(screenW, screenH);
 		this.shootingStars.update(dt);
 		this.petalRain.setScreenSize(screenW, screenH);
@@ -483,6 +589,88 @@ export class GardenEngine {
 		this.milestone.checkMilestone(totalFlowers);
 	}
 
+	/** Debug: trigger first flower ceremony */
+	debugFirstFlower() {
+		this.firstFlower.trigger(this.app.screen.width / 2, this.app.screen.height * 0.4);
+	}
+
+	/** Debug: trigger rainbow */
+	debugRainbow() {
+		this.rainbow.trigger();
+	}
+
+	/** Debug: trigger star mode */
+	debugStarMode() {
+		this.starMode.trigger();
+	}
+
+	/** Debug: trigger confetti/milestone */
+	debugMilestone() {
+		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
+		(this.milestone as any).burst();
+	}
+
+	/** Debug: trigger rain ripple at center (force=true bypasses rain check) */
+	debugRainRipple() {
+		this.rainRipples.trigger(this.app.screen.width / 2, this.app.screen.height / 2, true);
+	}
+
+	/** Debug: force morning dew visible */
+	debugDew() {
+		this.dewDrops.forceDew();
+	}
+
+	/** Debug: trigger petal rain */
+	debugPetalRain() {
+		this.petalRain.setScreenSize(this.app.screen.width, this.app.screen.height);
+		this.petalRain.trigger(this.flowers);
+	}
+
+	/** Debug: trigger midnight bloom */
+	debugMidnightBloom() {
+		this.midnightBloom.trigger(10);
+	}
+
+	/** Debug: trigger anniversary glow on first flower */
+	debugAnniversary() {
+		if (this.flowers.length > 0) {
+			this.anniversaryGlow.activate(this.flowers[0]);
+		}
+	}
+
+	/** Debug: trigger wind gust */
+	debugWindGust() {
+		this.windSystem.forceGust();
+	}
+
+	/** Start timelapse replay: hide all flowers, grow them one by one */
+	startTimelapse() {
+		if (this.timelapseActive || this.flowers.length === 0) return;
+		this.timelapseActive = true;
+		this.timelapseTimer = 0;
+		this.timelapseIndex = 0;
+		this.timelapseFlowers = [...this.flowers];
+
+		// Hide all flowers
+		for (const f of this.timelapseFlowers) {
+			f.setGrowIn(99999); // effectively hidden
+		}
+
+		// Start camera at center
+		this.camera.focusOn(0, 0, 0.7);
+	}
+
+	/** Stop timelapse and restore all flowers */
+	stopTimelapse() {
+		if (!this.timelapseActive) return;
+		this.timelapseActive = false;
+		for (const f of this.timelapseFlowers) {
+			f.setGrowIn(0); // instant grow
+		}
+		this.timelapseFlowers = [];
+		this.onTimelapseDate?.(null);
+	}
+
 	/** Export the current garden view as a PNG data URL */
 	exportImage(): string | null {
 		try {
@@ -517,6 +705,7 @@ export class GardenEngine {
 		this.rainRipples.destroy();
 
 		this.milestone.destroy();
+		this.firstFlower.destroy();
 		this.app.destroy(true);
 	}
 }

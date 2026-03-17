@@ -19,19 +19,19 @@ export class RainRipples {
 		this.isRaining = raining;
 	}
 
-	/** Trigger ripples at a screen position */
-	trigger(screenX: number, screenY: number) {
-		if (!this.isRaining) return;
+	/** Trigger ripples at a screen position (force=true bypasses rain check for debug) */
+	trigger(screenX: number, screenY: number, force = false) {
+		if (!this.isRaining && !force) return;
 
 		// Main ripple + 2-3 smaller splash ripples
-		this.ripples.push({ x: screenX, y: screenY, radius: 0, alpha: 0.5 });
+		this.ripples.push({ x: screenX, y: screenY, radius: 0, alpha: 0.7 });
 		const count = 2 + Math.floor(Math.random() * 2);
 		for (let i = 0; i < count; i++) {
 			this.ripples.push({
-				x: screenX + (Math.random() - 0.5) * 30,
-				y: screenY + (Math.random() - 0.5) * 20,
+				x: screenX + (Math.random() - 0.5) * 40,
+				y: screenY + (Math.random() - 0.5) * 25,
 				radius: 0,
-				alpha: 0.3 + Math.random() * 0.15,
+				alpha: 0.4 + Math.random() * 0.2,
 			});
 		}
 	}
@@ -47,9 +47,14 @@ export class RainRipples {
 		this.gfx.clear();
 		if (this.ripples.length === 0) return;
 
+		// Use darker color during day for visibility
+		const h = new Date().getHours();
+		const isDaytime = h >= 7 && h < 18;
+		const color = isDaytime ? 0x556677 : 0xaaccee;
+
 		for (const r of this.ripples) {
 			this.gfx.circle(r.x, r.y, r.radius);
-			this.gfx.stroke({ color: 0xaaccee, alpha: r.alpha, width: 1 });
+			this.gfx.stroke({ color, alpha: r.alpha, width: 1.5 });
 		}
 	}
 
