@@ -42,26 +42,26 @@
 
 	const themeStyle = getUIThemeStyle();
 
-	// Fetch weather on mount via browser geolocation + Open-Meteo
+	// Fetch weather on mount via IP geolocation (no browser prompt)
 	$effect(() => {
-		if (!navigator.geolocation) return;
-		navigator.geolocation.getCurrentPosition(
-			async (pos) => {
-				try {
-					const { latitude, longitude } = pos.coords;
-					const res = await fetch(
-						`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code`
-					);
-					if (!res.ok) return;
-					const data = await res.json();
-					const temp = Math.round(data.current.temperature_2m);
-					const code = data.current.weather_code as number;
-					const { icon, condition } = weatherCodeToInfo(code);
-					weather = { temp, icon, condition };
-				} catch {}
-			},
-			() => {} // silently ignore denied permission
-		);
+		(async () => {
+			try {
+				const geo = await fetch('http://ip-api.com/json/?fields=lat,lon', { signal: AbortSignal.timeout(5000) });
+				if (!geo.ok) return;
+				const { lat, lon } = await geo.json();
+
+				const res = await fetch(
+					`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`,
+					{ signal: AbortSignal.timeout(5000) }
+				);
+				if (!res.ok) return;
+				const data = await res.json();
+				const temp = Math.round(data.current.temperature_2m);
+				const code = data.current.weather_code as number;
+				const { icon, condition } = weatherCodeToInfo(code);
+				weather = { temp, icon, condition };
+			} catch {}
+		})();
 	});
 
 	function weatherCodeToInfo(code: number): { icon: string; condition: string } {
