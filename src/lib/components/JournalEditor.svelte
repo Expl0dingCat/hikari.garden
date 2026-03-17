@@ -252,6 +252,7 @@
 		border-radius: 20px;
 		padding: 16px 24px 24px;
 		width: 94%;
+		min-width: 900px;
 		max-width: 900px;
 		max-height: 90vh;
 		overflow: visible;
@@ -332,6 +333,7 @@
 			overflow-y: auto;
 			border-radius: 14px;
 			width: 100%;
+			min-width: 0;
 		}
 		.top-bar {
 			flex-wrap: wrap;
