@@ -588,16 +588,19 @@
 			font-size: 20px;
 		}
 		.top-bar {
-			flex-wrap: wrap;
 			gap: 6px;
 			margin-bottom: 12px;
 			padding-bottom: 10px;
 		}
 		.top-date {
 			font-size: 13px;
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 		.top-meta {
-			flex-wrap: wrap;
+			display: none;
 		}
 	}
 
