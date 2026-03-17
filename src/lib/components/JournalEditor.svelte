@@ -445,6 +445,10 @@
 		outline: none;
 		min-height: 120px;
 		flex: 1;
+		width: 100%;
+		box-sizing: border-box;
+		word-break: break-word;
+		overflow-wrap: break-word;
 		transition: border-color 0.2s;
 	}
 	.journal-textarea:focus {
