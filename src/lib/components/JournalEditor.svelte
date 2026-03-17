@@ -783,7 +783,8 @@
 		.panel-flower {
 			width: auto;
 			order: 0;
-			overflow: hidden;
+			overflow-y: auto;
+			overflow-x: hidden;
 		}
 
 		.panel-write {
@@ -799,7 +800,8 @@
 		}
 
 		.preview-section {
-			min-height: 120px;
+			min-height: 80px;
+			max-height: 120px;
 		}
 
 		.desktop-actions {
