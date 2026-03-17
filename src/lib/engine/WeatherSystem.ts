@@ -199,33 +199,23 @@ export class WeatherSystem {
 	}
 }
 
-/** Fetch current weather condition from Open-Meteo via browser geolocation */
-export function fetchWeatherCondition(): Promise<WeatherCondition> {
-	return new Promise((resolve) => {
-		if (typeof navigator === 'undefined' || !navigator.geolocation) {
-			resolve('clear');
-			return;
-		}
+/** Fetch current weather condition via IP-based geolocation (no browser prompt) */
+export async function fetchWeatherCondition(): Promise<WeatherCondition> {
+	try {
+		const geo = await fetch('http://ip-api.com/json/?fields=lat,lon', { signal: AbortSignal.timeout(5000) });
+		if (!geo.ok) return 'clear';
+		const { lat, lon } = await geo.json();
 
-		navigator.geolocation.getCurrentPosition(
-			async (pos) => {
-				try {
-					const { latitude, longitude } = pos.coords;
-					const res = await fetch(
-						`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=weather_code`
-					);
-					if (!res.ok) { resolve('clear'); return; }
-					const data = await res.json();
-					const code = data.current.weather_code as number;
-					resolve(weatherCodeToCondition(code));
-				} catch {
-					resolve('clear');
-				}
-			},
-			() => resolve('clear'),
-			{ timeout: 5000 }
+		const weather = await fetch(
+			`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`,
+			{ signal: AbortSignal.timeout(5000) }
 		);
-	});
+		if (!weather.ok) return 'clear';
+		const data = await weather.json();
+		return weatherCodeToCondition(data.current.weather_code as number);
+	} catch {
+		return 'clear';
+	}
 }
 
 function weatherCodeToCondition(code: number): WeatherCondition {
