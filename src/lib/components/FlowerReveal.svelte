@@ -33,6 +33,7 @@
 	let flowerCanvas: HTMLCanvasElement;
 	let flowerSideEl: HTMLDivElement;
 	let textSideHeight = $state('auto');
+	let mobileStep = $state(0);
 
 	// ─── Song playback via Spotify embed ───
 	let songPlaying = $state(false);
@@ -40,26 +41,32 @@
 	let embedController: any = null;
 	let embedContainer: HTMLDivElement | null = null;
 
-	// Eagerly load the Spotify IFrame API script on component init
-	if (typeof window !== 'undefined' && !(window as any).SpotifyIframeApi) {
-		if (!document.querySelector('script[src*="spotify.com/embed"]')) {
-			const s = document.createElement('script');
-			s.src = 'https://open.spotify.com/embed/iframe-api/v1';
-			s.async = true;
-			document.head.appendChild(s);
-		}
-	}
-
-	function ensureSpotifyApi(): Promise<any> {
-		if ((window as any).SpotifyIframeApi) return Promise.resolve((window as any).SpotifyIframeApi);
-		return new Promise((resolve) => {
+	// Eagerly load the Spotify IFrame API script and capture it via a global promise.
+	// The callback must be set BEFORE the script loads to avoid a race condition
+	// where the script fires onSpotifyIframeApiReady before ensureSpotifyApi() is called.
+	if (typeof window !== 'undefined' && !(window as any)._spotifyApiPromise) {
+		(window as any)._spotifyApiPromise = new Promise<any>((resolve) => {
+			if ((window as any).SpotifyIframeApi) {
+				resolve((window as any).SpotifyIframeApi);
+				return;
+			}
 			const prev = (window as any).onSpotifyIframeApiReady;
 			(window as any).onSpotifyIframeApiReady = (IFrameAPI: any) => {
 				(window as any).SpotifyIframeApi = IFrameAPI;
 				prev?.(IFrameAPI);
 				resolve(IFrameAPI);
 			};
+			if (!document.querySelector('script[src*="spotify.com/embed"]')) {
+				const s = document.createElement('script');
+				s.src = 'https://open.spotify.com/embed/iframe-api/v1';
+				s.async = true;
+				document.head.appendChild(s);
+			}
 		});
+	}
+
+	function ensureSpotifyApi(): Promise<any> {
+		return (window as any)._spotifyApiPromise || Promise.reject(new Error('Spotify API not initialized'));
 	}
 
 	let wantsPlay = $state(false);
@@ -216,6 +223,7 @@
 			smellCount = currentEntry.smells || 0;
 			smelled = false;
 			smellToast = null;
+			mobileStep = 0;
 			starred = currentEntry.isStarred || false;
 			if (smellToastTimer) clearTimeout(smellToastTimer);
 			revealTimer = setTimeout(() => {
@@ -565,7 +573,8 @@
 			</div>
 
 			<div class="card-body">
-				<div class="flower-side" bind:this={flowerSideEl}>
+				<div class="panels" style="--step:{mobileStep}">
+				<div class="panel panel-flower-view" bind:this={flowerSideEl}>
 					<div class="flower-display">
 						<div class="flower-glow" style="background: {glowColor}; top: {glowTop}"></div>
 						<canvas
@@ -614,7 +623,7 @@
 					{/if}
 				</div>
 
-				<div class="text-side" style="height: {textSideHeight}">
+				<div class="panel panel-text-view" style="height: {textSideHeight}">
 					{#if entry.title}
 						<h2 class="entry-title">{entry.title}</h2>
 					{/if}
@@ -653,9 +662,11 @@
 						</div>
 					{/if}
 				</div>
+				</div>
 			</div>
 
-			<div class="card-footer">
+			<!-- Desktop footer -->
+			<div class="card-footer desktop-footer">
 				<button class="share-btn" onclick={handleCopyLink}>
 					{#if linkCopied}
 						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -669,6 +680,42 @@
 					<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 					save flower
 				</button>
+			</div>
+
+			<!-- Mobile footer with step navigation -->
+			<div class="card-footer mobile-footer">
+				{#if mobileStep === 0}
+					<button class="share-btn" onclick={handleCopyLink}>
+						{#if linkCopied}
+							<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+							copied
+						{:else}
+							<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+							share
+						{/if}
+					</button>
+					<div class="step-dots">
+						<span class="dot active"></span>
+						<span class="dot"></span>
+					</div>
+					<button class="nav-btn" onclick={() => (mobileStep = 1)}>
+						flower
+						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+					</button>
+				{:else}
+					<button class="nav-btn" onclick={() => (mobileStep = 0)}>
+						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+						read
+					</button>
+					<div class="step-dots">
+						<span class="dot"></span>
+						<span class="dot active"></span>
+					</div>
+					<button class="share-btn" onclick={exportFlowerCard}>
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+						save
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -792,9 +839,17 @@
 	}
 
 	.card-body {
+		min-height: 0;
+	}
+
+	.panels {
 		display: flex;
 		gap: 36px;
 		align-items: flex-start;
+	}
+
+	.mobile-footer {
+		display: none;
 	}
 
 	@media (max-width: 600px) {
@@ -802,30 +857,63 @@
 			padding: 12px;
 		}
 		.reveal-card {
-			padding: 14px 16px 20px;
-			max-height: 85vh;
-			overflow-y: auto;
-			border-radius: 14px;
+			padding: 12px 14px 16px;
 			width: 100%;
+			max-width: 100%;
+			height: calc(100dvh - 24px);
+			max-height: calc(100dvh - 24px);
+			overflow: hidden;
+			border-radius: 14px;
+			display: flex;
+			flex-direction: column;
 		}
 		.card-body {
-			flex-direction: column;
-			gap: 16px;
+			flex: 1;
+			min-height: 0;
+			overflow: hidden;
 		}
-		.flower-side {
+		.panels {
+			gap: 0;
+			min-height: 0;
+			height: 100%;
+			transform: translateX(calc(var(--step) * -100%));
+			transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+		.panel {
+			width: 100%;
+			min-width: 100%;
+			max-width: 100%;
+			flex-shrink: 0;
+			overflow-y: auto;
+			overflow-x: hidden;
+			scrollbar-width: none;
+			box-sizing: border-box;
+			padding: 0 2px;
+		}
+		.panel::-webkit-scrollbar {
+			display: none;
+		}
+		.panel-flower-view {
 			width: 100% !important;
+			min-width: 100% !important;
+			flex: none !important;
 			align-items: center;
+			order: 1;
+		}
+		.panel-text-view {
+			width: 100% !important;
+			min-width: 100% !important;
+			flex: none !important;
+			height: auto !important;
+			order: 0;
 		}
 		.flower-canvas {
-			max-height: 120px;
+			max-height: 180px;
 			width: auto;
 		}
 		.flower-name {
 			font-size: 16px;
 			margin-bottom: 8px;
-		}
-		.text-side {
-			height: auto !important;
 		}
 		.mood-track {
 			min-width: 80px;
@@ -841,6 +929,7 @@
 			gap: 6px;
 			margin-bottom: 12px;
 			padding-bottom: 10px;
+			flex-shrink: 0;
 		}
 		.top-date {
 			font-size: 13px;
@@ -852,9 +941,17 @@
 		.top-meta {
 			display: none;
 		}
+		.desktop-footer {
+			display: none;
+		}
+		.mobile-footer {
+			display: flex;
+			justify-content: space-between;
+			flex-shrink: 0;
+		}
 	}
 
-	.flower-side {
+	.panel-flower-view {
 		display: flex;
 		flex-direction: column;
 		flex-shrink: 0;
@@ -981,9 +1078,48 @@
 	.card-footer {
 		display: flex;
 		justify-content: flex-end;
+		align-items: center;
+		gap: 10px;
 		padding-top: 12px;
 		margin-top: 8px;
 		border-top: 1px solid var(--ui-divider);
+	}
+
+	.step-dots {
+		display: flex;
+		gap: 6px;
+		align-items: center;
+	}
+
+	.dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 3px;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.12));
+		transition: width 0.3s, background 0.3s;
+	}
+	.dot.active {
+		width: 18px;
+		background: var(--ui-text-muted);
+	}
+
+	.nav-btn {
+		font-family: inherit;
+		font-size: 13px;
+		padding: 8px 16px;
+		border: none;
+		border-radius: 10px;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		color: var(--ui-text);
+		cursor: var(--cursor-pointer, pointer);
+		transition: background 0.2s;
+		letter-spacing: 0.5px;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.nav-btn:hover {
+		background: var(--ui-divider);
 	}
 
 	.share-btn {
@@ -1025,6 +1161,18 @@
 		-webkit-backdrop-filter: blur(12px);
 		box-shadow: var(--ui-shadow);
 		pointer-events: none;
+		max-width: calc(100vw - 32px);
+		box-sizing: border-box;
+	}
+
+	@media (max-width: 600px) {
+		.smell-toast {
+			white-space: normal;
+			text-align: center;
+			font-size: 15px;
+			padding: 12px 20px;
+			bottom: 80px;
+		}
 	}
 
 	.mood-bars {
@@ -1063,7 +1211,7 @@
 		transition: width 0.6s ease;
 	}
 
-	.text-side {
+	.panel-text-view {
 		flex: 1;
 		display: flex;
 		flex-direction: column;

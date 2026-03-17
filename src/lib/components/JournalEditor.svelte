@@ -167,6 +167,7 @@
 			bind:value={title}
 			placeholder="title for today..."
 			class="title-input"
+			class:mobile-hide={mobileStep === 1}
 			maxlength={50}
 			disabled={locked}
 		/>
@@ -223,40 +224,42 @@
 				</div>
 			</div>
 
-			<!-- Panel 2: Flower & Details -->
+		<!-- Panel 2: Flower & Details -->
 			<div class="panel panel-flower">
-				<div class="preview-section">
-					<FlowerPreview {mood} {flowerSeed} />
-				</div>
-
-				<div class="mood-section">
-					<MoodSelector bind:mood />
-				</div>
-
-				<div class="tag-area">
-					<div class="tags">
-						{#each tags as tag}
-							<button class="tag" onclick={() => !locked && removeTag(tag)} disabled={locked}>
-								{tag} &times;
-							</button>
-						{/each}
+				<div class="panel-flower-scroll">
+					<div class="preview-section">
+						<FlowerPreview {mood} {flowerSeed} />
 					</div>
-					{#if !locked}
-						<div class="tag-input-wrap">
-							<input
-								bind:value={tagInput}
-								placeholder="add a tag..."
-								class="tag-input"
-								onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-							/>
-							{#if tagInput.trim()}
-								<button class="tag-add-btn" onclick={addTag} type="button" aria-label="Add tag">+</button>
-							{/if}
-						</div>
-					{/if}
-				</div>
 
-				<SongPicker value={song} onchange={(s) => (song = s)} disabled={locked} />
+					<div class="mood-section">
+						<MoodSelector bind:mood />
+					</div>
+
+					<SongPicker value={song} onchange={(s) => (song = s)} disabled={locked} />
+
+					<div class="tag-area">
+						<div class="tags">
+							{#each tags as tag}
+								<button class="tag" onclick={() => !locked && removeTag(tag)} disabled={locked}>
+									{tag} &times;
+								</button>
+							{/each}
+						</div>
+						{#if !locked}
+							<div class="tag-input-wrap">
+								<input
+									bind:value={tagInput}
+									placeholder="add a tag..."
+									class="tag-input"
+									onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+								/>
+								{#if tagInput.trim()}
+									<button class="tag-add-btn" onclick={addTag} type="button" aria-label="Add tag">+</button>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -407,6 +410,12 @@
 		width: 240px;
 		gap: 10px;
 		order: -1;
+	}
+
+	.panel-flower-scroll {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
 	}
 
 	.panel-write {
@@ -767,30 +776,39 @@
 		}
 
 		.panel {
+			width: 100%;
 			min-width: 100%;
+			max-width: 100%;
 			flex-shrink: 0;
-			overflow-y: hidden;
+			overflow: hidden;
 			scrollbar-width: none;
-			padding: 0 2px;
+			padding: 0;
+			box-sizing: border-box;
 		}
 		.panel::-webkit-scrollbar {
 			display: none;
 		}
-		.panel-write {
-			overflow-y: auto;
-		}
-
-		.panel-flower {
-			width: auto;
-			order: 0;
-			overflow-y: auto;
-			overflow-x: hidden;
-		}
 
 		.panel-write {
+			overflow-y: auto;
 			min-height: 0;
 			display: flex;
 			flex-direction: column;
+			padding: 0 2px;
+		}
+
+		.panel-flower {
+			width: 100%;
+			order: 0;
+			overflow-x: hidden;
+			overflow-y: auto;
+			padding: 0 2px;
+		}
+
+		.panel-flower-scroll {
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
 		}
 
 		.journal-textarea {
@@ -800,8 +818,11 @@
 		}
 
 		.preview-section {
-			min-height: 80px;
-			max-height: 120px;
+			min-height: 240px;
+		}
+
+		.mobile-hide {
+			display: none;
 		}
 
 		.desktop-actions {

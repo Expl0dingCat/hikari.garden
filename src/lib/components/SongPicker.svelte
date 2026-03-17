@@ -285,12 +285,13 @@
 
 	@media (max-width: 700px) {
 		.dropdown {
-			position: fixed;
-			left: 16px;
-			right: 16px;
-			bottom: 70px;
+			position: absolute;
+			left: 0;
+			right: 0;
+			bottom: calc(100% + 4px);
 			top: auto;
-			max-height: 40vh;
+			max-height: 50vh;
+			z-index: 100;
 		}
 	}
 </style>

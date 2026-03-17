@@ -1,11 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const IMAGE_DIR = resolve('data/images');
+
+mkdirSync(IMAGE_DIR, { recursive: true });
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.isAdmin) {

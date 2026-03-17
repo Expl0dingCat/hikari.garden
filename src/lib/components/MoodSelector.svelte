@@ -50,12 +50,16 @@
 		flex-direction: column;
 		gap: 12px;
 		padding: 16px;
+		box-sizing: border-box;
+		max-width: 100%;
+		overflow: hidden;
 	}
 
 	.mood-axis {
 		display: flex;
 		align-items: center;
 		gap: 8px;
+		min-width: 0;
 	}
 
 	.axis-icon {
@@ -70,6 +74,7 @@
 
 	.slider-container {
 		flex: 1;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
