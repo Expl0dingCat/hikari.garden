@@ -14,6 +14,11 @@ export class Camera {
 	private smoothing = 0.12;
 	private dragThreshold = 5; // pixels before considered a drag
 
+	// Pinch-to-zoom state
+	private activePointers = new Map<number, { x: number; y: number }>();
+	private lastPinchDist = 0;
+	private isPinching = false;
+
 	minZoom = 0.3;
 	maxZoom = 3;
 
@@ -40,10 +45,22 @@ export class Camera {
 		this.canvas.addEventListener('pointermove', this.onPointerMove);
 		this.canvas.addEventListener('pointerup', this.onPointerUp);
 		this.canvas.addEventListener('pointerleave', this.onPointerUp);
+		this.canvas.addEventListener('pointercancel', this.onPointerUp);
 		this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
+		this.canvas.style.touchAction = 'none';
 	}
 
 	private onPointerDown = (e: PointerEvent) => {
+		this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+		if (this.activePointers.size === 2) {
+			// Start pinch
+			this.isPinching = true;
+			this.isDragging = false;
+			this.lastPinchDist = this.getPinchDist();
+			return;
+		}
+
 		this.isDragging = true;
 		this.didDrag = false;
 		this.lastPointerX = e.clientX;
@@ -51,6 +68,19 @@ export class Camera {
 	};
 
 	private onPointerMove = (e: PointerEvent) => {
+		this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+		if (this.isPinching && this.activePointers.size === 2) {
+			const dist = this.getPinchDist();
+			if (this.lastPinchDist > 0) {
+				const scale = dist / this.lastPinchDist;
+				this.targetZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.targetZoom * scale));
+				this.userInteracted = true;
+			}
+			this.lastPinchDist = dist;
+			return;
+		}
+
 		if (!this.isDragging) return;
 		const dx = e.clientX - this.lastPointerX;
 		const dy = e.clientY - this.lastPointerY;
@@ -70,10 +100,27 @@ export class Camera {
 		this.lastPointerY = e.clientY;
 	};
 
-	private onPointerUp = () => {
-		this.isDragging = false;
-		this.canvas.style.cursor = this.getCursor?.('default') ?? 'grab';
+	private onPointerUp = (e: PointerEvent) => {
+		this.activePointers.delete(e.pointerId);
+
+		if (this.activePointers.size < 2) {
+			this.isPinching = false;
+			this.lastPinchDist = 0;
+		}
+
+		if (this.activePointers.size === 0) {
+			this.isDragging = false;
+			this.canvas.style.cursor = this.getCursor?.('default') ?? 'grab';
+		}
 	};
+
+	private getPinchDist(): number {
+		const pts = [...this.activePointers.values()];
+		if (pts.length < 2) return 0;
+		const dx = pts[0].x - pts[1].x;
+		const dy = pts[0].y - pts[1].y;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
 
 	private onWheel = (e: WheelEvent) => {
 		e.preventDefault();
@@ -121,6 +168,7 @@ export class Camera {
 		this.canvas.removeEventListener('pointermove', this.onPointerMove);
 		this.canvas.removeEventListener('pointerup', this.onPointerUp);
 		this.canvas.removeEventListener('pointerleave', this.onPointerUp);
+		this.canvas.removeEventListener('pointercancel', this.onPointerUp);
 		this.canvas.removeEventListener('wheel', this.onWheel);
 	}
 }

@@ -174,6 +174,7 @@
 		border-radius: 20px;
 		padding: 32px 28px;
 		width: 300px;
+		max-width: 90vw;
 		text-align: center;
 		box-shadow: var(--ui-shadow);
 		color: var(--ui-text);

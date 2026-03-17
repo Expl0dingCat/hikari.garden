@@ -46,9 +46,10 @@
 	$effect(() => {
 		(async () => {
 			try {
-				const geo = await fetch('http://ip-api.com/json/?fields=lat,lon', { signal: AbortSignal.timeout(5000) });
+				const geo = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) });
 				if (!geo.ok) return;
-				const { lat, lon } = await geo.json();
+				const geoData = await geo.json();
+				const lat = geoData.latitude, lon = geoData.longitude;
 
 				const res = await fetch(
 					`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`,
@@ -250,8 +251,8 @@
 		border: 1px solid var(--ui-card-border);
 		border-radius: 20px;
 		padding: 16px 24px 24px;
-		min-width: 900px;
 		width: 94%;
+		max-width: 900px;
 		max-height: 90vh;
 		overflow: visible;
 		box-shadow: var(--ui-shadow);
@@ -325,12 +326,22 @@
 	}
 
 	@media (max-width: 700px) {
+		.editor {
+			padding: 14px 16px 18px;
+			max-height: 95vh;
+			overflow-y: auto;
+			border-radius: 14px;
+		}
 		.card-body {
 			flex-direction: column;
+			min-height: auto;
 		}
 		.flower-side {
 			width: 100% !important;
 			align-items: center;
+		}
+		.preview-section {
+			min-height: 160px;
 		}
 	}
 

@@ -394,4 +394,27 @@
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 	}
+
+	@media (max-width: 600px) {
+		.top-bar {
+			padding: 14px 16px;
+		}
+		.site-name {
+			font-size: 16px;
+			letter-spacing: 1px;
+		}
+		.month-picker {
+			bottom: 16px;
+			padding: 6px 12px;
+			gap: 8px;
+		}
+		.month-label {
+			font-size: 12px;
+			min-width: 110px;
+		}
+		.welcome p {
+			font-size: 20px;
+			letter-spacing: 2px;
+		}
+	}
 </style>

@@ -493,11 +493,22 @@
 	}
 
 	@media (max-width: 600px) {
+		.reveal-card {
+			padding: 14px 16px 20px;
+			max-height: 95vh;
+			overflow-y: auto;
+			border-radius: 14px;
+		}
 		.card-body {
 			flex-direction: column;
+			gap: 20px;
 		}
 		.flower-side {
+			width: 100% !important;
 			align-items: center;
+		}
+		.entry-title {
+			font-size: 20px;
 		}
 	}
 

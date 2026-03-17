@@ -202,9 +202,10 @@ export class WeatherSystem {
 /** Fetch current weather condition via IP-based geolocation (no browser prompt) */
 export async function fetchWeatherCondition(): Promise<WeatherCondition> {
 	try {
-		const geo = await fetch('http://ip-api.com/json/?fields=lat,lon', { signal: AbortSignal.timeout(5000) });
+		const geo = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) });
 		if (!geo.ok) return 'clear';
-		const { lat, lon } = await geo.json();
+		const geoData = await geo.json();
+		const lat = geoData.latitude, lon = geoData.longitude;
 
 		const weather = await fetch(
 			`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`,
