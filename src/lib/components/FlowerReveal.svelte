@@ -34,6 +34,21 @@
 	let flowerSideEl: HTMLDivElement;
 	let textSideHeight = $state('auto');
 	let mobileStep = $state(0);
+	let touchStartX = 0;
+	let touchStartY = 0;
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.touches[0].clientX;
+		touchStartY = e.touches[0].clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		const dx = e.changedTouches[0].clientX - touchStartX;
+		const dy = e.changedTouches[0].clientY - touchStartY;
+		if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+		if (dx < 0 && mobileStep === 0) mobileStep = 1;
+		else if (dx > 0 && mobileStep === 1) mobileStep = 0;
+	}
 
 	// ─── Song playback via Spotify embed ───
 	let songPlaying = $state(false);
@@ -573,7 +588,8 @@
 			</div>
 
 			<div class="card-body">
-				<div class="panels" style="--step:{mobileStep}">
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div class="panels" style="--step:{mobileStep}" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 				<div class="panel panel-flower-view" bind:this={flowerSideEl}>
 					<div class="flower-display">
 						<div class="flower-glow" style="background: {glowColor}; top: {glowTop}"></div>
@@ -684,38 +700,42 @@
 
 			<!-- Mobile footer with step navigation -->
 			<div class="card-footer mobile-footer">
-				{#if mobileStep === 0}
-					<button class="share-btn" onclick={handleCopyLink}>
-						{#if linkCopied}
-							<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-							copied
-						{:else}
-							<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-							share
-						{/if}
-					</button>
-					<div class="step-dots">
-						<span class="dot active"></span>
-						<span class="dot"></span>
-					</div>
-					<button class="nav-btn" onclick={() => (mobileStep = 1)}>
-						flower
-						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
-					</button>
-				{:else}
-					<button class="nav-btn" onclick={() => (mobileStep = 0)}>
-						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-						read
-					</button>
-					<div class="step-dots">
-						<span class="dot"></span>
-						<span class="dot active"></span>
-					</div>
-					<button class="share-btn" onclick={exportFlowerCard}>
-						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-						save
-					</button>
-				{/if}
+				<div class="footer-slot footer-left">
+					{#if mobileStep === 1}
+						<button class="nav-btn" transition:fade={{ duration: 200 }} onclick={() => (mobileStep = 0)}>
+							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+							read
+						</button>
+					{/if}
+				</div>
+				<div class="step-dots">
+					<span class="dot" class:active={mobileStep === 0}></span>
+					<span class="dot" class:active={mobileStep === 1}></span>
+				</div>
+				<div class="footer-slot footer-right">
+					{#if mobileStep === 0}
+						<button class="nav-btn" transition:fade={{ duration: 200 }} onclick={() => (mobileStep = 1)}>
+							flower
+							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+						</button>
+					{:else}
+						<div class="footer-actions" transition:fade={{ duration: 200 }}>
+							<button class="share-btn" onclick={handleCopyLink}>
+								{#if linkCopied}
+									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+									copied
+								{:else}
+									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+									share
+								{/if}
+							</button>
+							<button class="share-btn" onclick={exportFlowerCard}>
+								<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+								save
+							</button>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 	</div>
@@ -916,6 +936,11 @@
 			flex: none !important;
 			height: auto !important;
 			order: 0;
+			overflow-y: auto !important;
+			scrollbar-width: none;
+		}
+		.panel-text-view::-webkit-scrollbar {
+			display: none;
 		}
 		.flower-canvas {
 			max-height: 180px;
@@ -957,7 +982,24 @@
 		.mobile-footer {
 			display: flex;
 			justify-content: space-between;
+			align-items: center;
 			flex-shrink: 0;
+		}
+		.footer-slot {
+			flex: 1;
+			min-width: 0;
+		}
+		.footer-left {
+			display: flex;
+			justify-content: flex-start;
+		}
+		.footer-right {
+			display: flex;
+			justify-content: flex-end;
+		}
+		.footer-actions {
+			display: flex;
+			gap: 6px;
 		}
 	}
 
@@ -1323,6 +1365,10 @@
 		cursor: var(--cursor-pointer, pointer);
 		transition: opacity 0.2s;
 	}
+	.strip-img:only-child {
+		height: 180px;
+		max-width: 100%;
+	}
 	.strip-img:hover {
 		opacity: 0.8;
 	}
@@ -1403,7 +1449,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
-		margin-top: 14px;
+		margin-top: auto;
 		padding-top: 12px;
 		border-top: 1px solid var(--ui-divider);
 		flex-shrink: 0;

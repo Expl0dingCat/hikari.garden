@@ -53,6 +53,21 @@
 	let imagePreviews = $state<string[]>([]);
 	let fileInput: HTMLInputElement;
 	let mobileStep = $state(0);
+	let touchStartX = 0;
+	let touchStartY = 0;
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.touches[0].clientX;
+		touchStartY = e.touches[0].clientY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		const dx = e.changedTouches[0].clientX - touchStartX;
+		const dy = e.changedTouches[0].clientY - touchStartY;
+		if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+		if (dx < 0 && mobileStep === 0 && text.trim()) mobileStep = 1;
+		else if (dx > 0 && mobileStep === 1) mobileStep = 0;
+	}
 
 	$effect(() => {
 		const d = { title, text, date, tags, mood, song, flowerSeed };
@@ -181,7 +196,8 @@
 	</div>
 
 	<div class="card-body">
-		<div class="panels" style="--step:{mobileStep}">
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="panels" style="--step:{mobileStep}" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 			<!-- Panel 1: Write -->
 			<div class="panel panel-write">
 				<textarea
