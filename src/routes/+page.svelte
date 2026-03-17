@@ -324,7 +324,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="editor-overlay" style="cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={() => (showEditor = false)}>
-		<div onclick={(e) => e.stopPropagation()}>
+		<div class="editor-wrap" onclick={(e) => e.stopPropagation()}>
 			<JournalEditor onsubmit={handleSubmit} oncancel={() => (showEditor = false)} />
 		</div>
 	</div>
@@ -602,6 +602,10 @@
 		background: var(--ui-overlay);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
+	}
+	.editor-wrap {
+		max-width: 100%;
+		max-height: 100%;
 	}
 
 	.on-this-day {
