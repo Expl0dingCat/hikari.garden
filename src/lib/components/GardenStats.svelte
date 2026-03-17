@@ -7,9 +7,13 @@
 	interface Props {
 		entries: JournalEntry[];
 		onclose: () => void;
+		isAdmin: boolean;
+		ownerName: string;
 	}
 
-	let { entries, onclose }: Props = $props();
+	let { entries, onclose, isAdmin, ownerName }: Props = $props();
+
+	let heading = $derived(isAdmin ? 'your garden' : `${ownerName}'s garden`);
 
 	const themeStyle = getUIThemeStyle();
 
@@ -101,7 +105,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="overlay" style="{themeStyle};cursor:{$cursorDefault}" transition:fade={{ duration: 200 }} onclick={onclose}>
 	<div class="card" onclick={(e) => e.stopPropagation()}>
-		<h2>your garden</h2>
+		<h2>{heading}</h2>
 
 		{#if stats}
 			<div class="stat-list">

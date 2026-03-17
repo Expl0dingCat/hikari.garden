@@ -156,7 +156,7 @@
 </div>
 
 {#if showStats}
-	<GardenStats entries={$entries} onclose={() => (showStats = false)} />
+	<GardenStats entries={$entries} onclose={() => (showStats = false)} isAdmin={$isAdmin} ownerName={env.PUBLIC_OWNER_NAME || 'hikari'} />
 {/if}
 
 {#if showLogin}
