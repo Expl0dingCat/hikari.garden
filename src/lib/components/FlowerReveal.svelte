@@ -495,9 +495,10 @@
 	@media (max-width: 600px) {
 		.reveal-card {
 			padding: 14px 16px 20px;
-			max-height: 95vh;
+			max-height: 92vh;
 			overflow-y: auto;
 			border-radius: 14px;
+			width: 96%;
 		}
 		.card-body {
 			flex-direction: column;
@@ -507,8 +508,21 @@
 			width: 100% !important;
 			align-items: center;
 		}
+		.text-side {
+			height: auto !important;
+		}
+		.mood-track {
+			min-width: 80px;
+		}
 		.entry-title {
 			font-size: 20px;
+		}
+		.top-bar {
+			flex-wrap: wrap;
+			gap: 6px;
+		}
+		.top-meta {
+			flex-wrap: wrap;
 		}
 	}
 
