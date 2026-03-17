@@ -213,7 +213,6 @@
 	// ─── Debug Menu (Ctrl+Shift+D) ───
 	let showDebug = $state(false);
 	let timelapseDate = $state<string | null>(null);
-	let ceremonyText = $state<{ text: string; alpha: number }>({ text: '', alpha: 0 });
 
 	function handleGlobalKeydown(e: KeyboardEvent) {
 		if (debugEnabled && e.ctrlKey && e.shiftKey && e.key === 'D') {
@@ -232,7 +231,6 @@
 			const eng = getEngine();
 			if (eng) {
 				eng.onTimelapseDate = (d: string | null) => { timelapseDate = d; };
-				eng.onCeremonyText = (t: string, a: number) => { ceremonyText = { text: t, alpha: a }; };
 			} else {
 				setTimeout(check, 500);
 			}
@@ -405,12 +403,6 @@
 	</div>
 {/if}
 
-{#if ceremonyText.text && ceremonyText.alpha > 0}
-	<div class="ceremony-text" style="opacity: {ceremonyText.alpha}">
-		{ceremonyText.text}
-	</div>
-{/if}
-
 {#if timelapseDate}
 	<div class="timelapse-date" transition:fade={{ duration: 200 }}>
 		{new Date(timelapseDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -432,7 +424,7 @@
 			<button onclick={() => getEngine()?.debugAnniversary()}>anniversary glow</button>
 			<button onclick={() => getEngine()?.debugWindGust()}>wind gust</button>
 			<button onclick={() => getEngine()?.debugDew()}>morning dew</button>
-			<button onclick={() => getEngine()?.debugFirstFlower()}>first flower</button>
+
 			<button onclick={() => getEngine()?.startTimelapse()}>timelapse start</button>
 			<button onclick={() => getEngine()?.stopTimelapse()}>timelapse stop</button>
 			<button onclick={() => { const url = getEngine()?.exportImage(); if (url) { const a = document.createElement('a'); a.href = url; a.download = 'garden.png'; a.click(); } }}>export PNG</button>
@@ -877,20 +869,6 @@
 	}
 	.help-cta:hover {
 		color: var(--ui-text);
-	}
-
-	.ceremony-text {
-		position: fixed;
-		bottom: 35%;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: 50;
-		font-family: 'Darumadrop One', cursive;
-		font-size: 24px;
-		letter-spacing: 3px;
-		color: #ffd700;
-		text-shadow: 0 0 20px rgba(255, 215, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
-		pointer-events: none;
 	}
 
 	.timelapse-date {

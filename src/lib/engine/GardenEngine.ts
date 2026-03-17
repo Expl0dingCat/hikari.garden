@@ -20,7 +20,7 @@ import { WindSystem } from './WindSystem.js';
 import { DewDrops } from './DewDrops.js';
 import { Rainbow } from './Rainbow.js';
 import { StarMode } from './StarMode.js';
-import { FirstFlowerCeremony } from './FirstFlowerCeremony.js';
+
 import { getSolarTimes } from './SolarTimes.js';
 
 import { RainRipples } from './RainRipples.js';
@@ -63,7 +63,6 @@ export class GardenEngine {
 	private dewDrops: DewDrops;
 	private rainbow: Rainbow;
 	private starMode: StarMode;
-	private firstFlower: FirstFlowerCeremony;
 	private previousFlowerCount = 0;
 	private canvas!: HTMLCanvasElement;
 	private cursors!: CursorSet;
@@ -72,7 +71,6 @@ export class GardenEngine {
 	onFlowerHover: ((entry: JournalEntry | null, screenX: number, screenY: number) => void) | null = null;
 	onTodayFlowers: ((positions: { entry: JournalEntry; x: number; y: number }[]) => void) | null = null;
 	onLatestFlower: ((pos: { entry: JournalEntry; x: number; y: number } | null) => void) | null = null;
-	onCeremonyText: ((text: string, alpha: number) => void) | null = null;
 	onTimelapseDate: ((date: string | null) => void) | null = null;
 	private timelapseActive = false;
 	private timelapseTimer = 0;
@@ -102,7 +100,6 @@ export class GardenEngine {
 		this.dewDrops = new DewDrops();
 		this.rainbow = new Rainbow();
 		this.starMode = new StarMode();
-		this.firstFlower = new FirstFlowerCeremony();
 		this.theme = getBlendedTheme();
 		this.camera = null!;
 	}
@@ -142,7 +139,6 @@ export class GardenEngine {
 
 		this.app.stage.addChild(this.rainRipples.gfx);
 		this.app.stage.addChild(this.milestone.gfx);
-		this.app.stage.addChild(this.firstFlower.gfx);
 		this.app.stage.addChild(this.weather.container);
 
 		this.world.sortableChildren = true;
@@ -180,11 +176,6 @@ export class GardenEngine {
 		this.konamiCode.onStars(() => {
 			this.starMode.trigger();
 		});
-
-		// First flower ceremony text callback
-		this.firstFlower.onShowText = (text, alpha) => {
-			this.onCeremonyText?.(text, alpha);
-		};
 
 		// Fetch and apply current weather
 		this.weather.setScreenSize(this.app.screen.width, this.app.screen.height);
@@ -397,11 +388,6 @@ export class GardenEngine {
 			this.app.screen.height / this.camera.zoom
 		);
 
-		// First flower ceremony: 0→1 transition
-		if (!skipGrowIn) {
-			const screenCenter = this.worldToScreen(0, 0);
-			this.firstFlower.tryTrigger(this.previousFlowerCount, entries.length, screenCenter.x, screenCenter.y);
-		}
 		this.previousFlowerCount = entries.length;
 	}
 
@@ -450,9 +436,6 @@ export class GardenEngine {
 
 		this.milestone.setScreenSize(this.app.screen.width, this.app.screen.height);
 		this.milestone.update(dt);
-
-		this.firstFlower.setScreenSize(this.app.screen.width, this.app.screen.height);
-		this.firstFlower.update(dt);
 
 		// Timelapse replay
 		if (this.timelapseActive) {
@@ -589,11 +572,6 @@ export class GardenEngine {
 		this.milestone.checkMilestone(totalFlowers);
 	}
 
-	/** Debug: trigger first flower ceremony */
-	debugFirstFlower() {
-		this.firstFlower.trigger(this.app.screen.width / 2, this.app.screen.height * 0.4);
-	}
-
 	/** Debug: trigger rainbow */
 	debugRainbow() {
 		this.rainbow.trigger();
@@ -705,7 +683,6 @@ export class GardenEngine {
 		this.rainRipples.destroy();
 
 		this.milestone.destroy();
-		this.firstFlower.destroy();
 		this.app.destroy(true);
 	}
 }
