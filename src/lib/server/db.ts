@@ -22,7 +22,12 @@ db.exec(`
 		mood_hope REAL NOT NULL,
 		flower_seed INTEGER NOT NULL,
 		flower_name TEXT NOT NULL,
-		tags TEXT
+		tags TEXT,
+		title TEXT,
+		weather TEXT,
+		images TEXT,
+		song TEXT,
+		smells INTEGER NOT NULL DEFAULT 0
 	);
 
 	CREATE TABLE IF NOT EXISTS sessions (
@@ -35,6 +40,12 @@ db.exec(`
 // Migrations
 const cols = db.prepare("PRAGMA table_info(entries)").all() as { name: string }[];
 const colNames = cols.map((c) => c.name);
+if (!colNames.includes('title')) {
+	db.exec("ALTER TABLE entries ADD COLUMN title TEXT");
+}
+if (!colNames.includes('weather')) {
+	db.exec("ALTER TABLE entries ADD COLUMN weather TEXT");
+}
 if (!colNames.includes('images')) {
 	db.exec("ALTER TABLE entries ADD COLUMN images TEXT");
 }

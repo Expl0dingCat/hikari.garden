@@ -1,42 +1,70 @@
-# sv
+# hikari.garden
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+*A garden of feelings, grown one day at a time.*
 
-## Creating a project
+Every journal entry plants a flower. Your mood — joy, energy, tenderness, clarity, hope — becomes its DNA: the curve of its petals, the warmth of its colors, the height of its stem. No two flowers are alike. Over time, a garden grows.
 
-If you're seeing this, you've probably already done this step. Congrats!
+The garden lives and breathes. It shifts from dawn gold to daylight green to dusky violet to deep night blue as the hours pass. Rain falls when it rains outside. Snow drifts when it snows. Stars streak across the sky after dark, and if you're here at midnight, fireflies come out.
 
-```sh
-# create a new project
-npx sv create my-app
+Click a flower to remember the day it was planted.
+
+## Hidden things
+
+- Type the Konami code and petals will rain from the sky
+- Click the title five times quickly
+- Leave the garden idle and watch who visits
+- Come back at midnight
+
+## Growing your own
+
+```bash
+git clone https://github.com/Expl0dingCat/hikari.garden.git
+cd hikari.garden
+npm install
+cp .env.example .env
 ```
 
-To recreate this project with the same configuration:
+Generate a password to protect your garden:
 
-```sh
-# recreate this project
-npx sv@0.12.7 create --template minimal --types ts --no-install .
+```bash
+node -e "import('bcryptjs').then(b => console.log(b.hashSync('your-password', 12)))"
 ```
 
-## Developing
+Paste the hash into `.env` (escape `$` with `\$`), set your name and timezone, and optionally add Spotify API credentials to attach songs to entries.
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## Built with
 
-To create a production version of your app:
+[SvelteKit](https://svelte.dev) and [PixiJS](https://pixijs.com) for the living canvas. [SQLite](https://github.com/WiseLibs/better-sqlite3) for memory. [Open-Meteo](https://open-meteo.com) for weather. [Spotify Web API](https://developer.spotify.com) for music. Everything runs on a single Node.js server.
 
-```sh
+## Deploying
+
+```bash
 npm run build
+node build
 ```
 
-You can preview the production build with `npm run preview`.
+Listens on port 3000. The `data/` directory holds the database and uploaded images — back it up, that's where the flowers live.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Structure
+
+```
+src/
+  lib/
+    engine/          the living garden — camera, weather, particles,
+                     shooting stars, fireflies, grass, idle visitors
+    generation/      mood to flower — DNA, pixel art renderer,
+                     color palettes, petal shapes, name generator
+    components/      the UI — editor, mood selector, date & song
+                     pickers, flower reveal card, stats
+    server/          database, auth, entry storage
+  routes/            pages and API endpoints
+data/                sqlite database and images (gitignored)
+```
+
+## License
+
+MIT
