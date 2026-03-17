@@ -327,13 +327,28 @@
 
 	@media (max-width: 700px) {
 		.editor {
-			padding: 14px 16px 18px;
-			max-height: 95vh;
+			padding: 12px 14px 16px;
+			max-height: 85vh;
 			overflow-y: auto;
 			border-radius: 14px;
+			width: 100%;
+		}
+		.top-bar {
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-bottom: 12px;
+			padding-bottom: 10px;
+		}
+		.title-input {
+			font-size: 16px;
+			width: 100%;
+		}
+		.top-meta {
+			flex-wrap: wrap;
 		}
 		.card-body {
 			flex-direction: column;
+			gap: 16px;
 			min-height: auto;
 		}
 		.flower-side {
@@ -341,7 +356,13 @@
 			align-items: center;
 		}
 		.preview-section {
-			min-height: 160px;
+			min-height: 120px;
+		}
+		.journal-textarea {
+			min-height: 100px;
+		}
+		.actions {
+			padding-top: 10px;
 		}
 	}
 

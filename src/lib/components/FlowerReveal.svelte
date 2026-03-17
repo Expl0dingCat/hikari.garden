@@ -493,20 +493,31 @@
 	}
 
 	@media (max-width: 600px) {
+		.overlay {
+			padding: 12px;
+		}
 		.reveal-card {
 			padding: 14px 16px 20px;
-			max-height: 92vh;
+			max-height: 85vh;
 			overflow-y: auto;
 			border-radius: 14px;
-			width: 96%;
+			width: 100%;
 		}
 		.card-body {
 			flex-direction: column;
-			gap: 20px;
+			gap: 16px;
 		}
 		.flower-side {
 			width: 100% !important;
 			align-items: center;
+		}
+		.flower-canvas {
+			max-height: 120px;
+			width: auto;
+		}
+		.flower-name {
+			font-size: 16px;
+			margin-bottom: 8px;
 		}
 		.text-side {
 			height: auto !important;
@@ -514,12 +525,21 @@
 		.mood-track {
 			min-width: 80px;
 		}
+		.mood-label {
+			width: 60px;
+			font-size: 9px;
+		}
 		.entry-title {
 			font-size: 20px;
 		}
 		.top-bar {
 			flex-wrap: wrap;
 			gap: 6px;
+			margin-bottom: 12px;
+			padding-bottom: 10px;
+		}
+		.top-date {
+			font-size: 13px;
 		}
 		.top-meta {
 			flex-wrap: wrap;

@@ -399,6 +399,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		padding: 12px;
 		background: var(--ui-overlay);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
