@@ -25,20 +25,22 @@ click a flower to remember the day it was planted.
 ```bash
 git clone https://github.com/Expl0dingCat/hikari.garden.git
 cd hikari.garden
-npm install
-cp .env.example .env
+make setup
 ```
 
-generate a password to protect your garden:
+the setup wizard asks for a password, your name, timezone, and optional Spotify credentials — then writes `.env` for you.
 
-```bash
-node -e "import('bcryptjs').then(b => console.log(b.hashSync('your-password', 12)))"
-```
-
-paste the hash into `.env` (escape `$` with `\$`), set your name and timezone, and optionally add Spotify API credentials to attach songs to entries.
+or do it by hand: `cp .env.example .env` and fill in the values yourself.
 
 ```bash
 npm run dev
+```
+
+### with docker
+
+```bash
+make setup     # create .env first
+make docker    # builds and starts on port 3000
 ```
 
 ## built with
