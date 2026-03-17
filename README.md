@@ -8,6 +8,10 @@ The garden lives and breathes. It shifts from dawn gold to daylight green to dus
 
 Click a flower to remember the day it was planted.
 
+
+https://github.com/user-attachments/assets/3e59cb7b-daaa-4087-8668-11f8a05cf684
+
+
 ## Hidden things
 
 - Type the Konami code and petals will rain from the sky
