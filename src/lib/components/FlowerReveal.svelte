@@ -848,6 +848,16 @@
 		align-items: flex-start;
 	}
 
+	.card-footer {
+		display: flex;
+		justify-content: flex-end;
+		align-items: center;
+		gap: 10px;
+		padding-top: 12px;
+		margin-top: 8px;
+		border-top: 1px solid var(--ui-divider);
+	}
+
 	.mobile-footer {
 		display: none;
 	}
@@ -1073,16 +1083,6 @@
 	.star-btn:disabled:not(.starred) {
 		opacity: 0.5;
 		cursor: default;
-	}
-
-	.card-footer {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-		gap: 10px;
-		padding-top: 12px;
-		margin-top: 8px;
-		border-top: 1px solid var(--ui-divider);
 	}
 
 	.step-dots {
