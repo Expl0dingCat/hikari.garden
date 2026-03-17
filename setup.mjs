@@ -24,7 +24,7 @@ if (!password) {
 	process.exit(1);
 }
 
-const hash = hashSync(password, 12).replace(/\$/g, '\\$');
+const hash = hashSync(password, 12);
 const name = (await ask('Your name (default: hikari): ')) || 'hikari';
 const tz = (await ask('Timezone IANA (default: America/Toronto): ')) || 'America/Toronto';
 const tzLabel = (await ask(`Timezone label (default: ${tz.split('/').pop()}): `)) || tz.split('/').pop();
@@ -32,7 +32,7 @@ const tzLabel = (await ask(`Timezone label (default: ${tz.split('/').pop()}): `)
 const spotifyId = await ask('Spotify Client ID (optional, press Enter to skip): ');
 const spotifySecret = spotifyId ? await ask('Spotify Client Secret: ') : '';
 
-const env = `HIKARI_ADMIN_PASSWORD_HASH=${hash}
+const env = `HIKARI_ADMIN_PASSWORD_HASH='${hash}'
 PUBLIC_OWNER_NAME=${name}
 PUBLIC_OWNER_TIMEZONE=${tz}
 PUBLIC_OWNER_TIMEZONE_LABEL=${tzLabel}
