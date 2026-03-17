@@ -6,7 +6,7 @@
 	import GardenStats from '$lib/components/GardenStats.svelte';
 	import { entries, isAdmin, cursorDefault, cursorPointer, currentMonth, availableMonths, monthEntries, titleWaveTrigger, STARRED_MONTH, selectedFlower, pendingDeepLink } from '$lib/stores/garden.js';
 	import { page } from '$app/stores';
-	import { getTimePhase, getUIThemeStyle } from '$lib/engine/TimeOfDay.js';
+	import { getTimePhase, getUIThemeStyle, getOverlayThemeStyle } from '$lib/engine/TimeOfDay.js';
 	import { env } from '$env/dynamic/public';
 	import type { PageData } from './$types.js';
 	import type { MoodVector } from '$lib/types.js';
@@ -18,6 +18,7 @@
 
 	const phase = getTimePhase();
 	const editorThemeStyle = getUIThemeStyle();
+	const overlayStyle = getOverlayThemeStyle();
 
 	let { data }: { data: PageData } = $props();
 
@@ -155,13 +156,13 @@
 <FlowerReveal />
 
 {#if showWelcome}
-	<div class="welcome phase-{phase}" transition:fade={{ duration: 1200 }}>
+	<div class="welcome" style={overlayStyle} transition:fade={{ duration: 1200 }}>
 		<p in:fly={{ y: -20, duration: 1000, delay: 300 }}>welcome to {ownerName}'s garden</p>
 	</div>
 {/if}
 
 <!-- Floating UI -->
-<div class="ui-overlay phase-{phase}" style="--cursor-pointer:{$cursorPointer}">
+<div class="ui-overlay" style="{overlayStyle};--cursor-pointer:{$cursorPointer}">
 	<div class="top-bar">
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -320,17 +321,8 @@
 		font-size: 20px;
 		font-weight: 400;
 		letter-spacing: 2px;
-		color: rgba(255, 255, 255, 0.7);
-		text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
-	}
-
-	.phase-day .site-name {
-		color: rgba(40, 60, 40, 0.55);
-		text-shadow: none;
-	}
-	.phase-dawn .site-name {
-		color: rgba(100, 60, 30, 0.6);
-		text-shadow: none;
+		color: var(--overlay-text);
+		text-shadow: var(--overlay-text-shadow);
 	}
 
 	.controls {
@@ -344,29 +336,15 @@
 		padding: 8px 16px;
 		border: none;
 		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.15);
-		color: rgba(255, 255, 255, 0.8);
+		background: var(--overlay-btn-bg);
+		color: var(--overlay-text);
 		cursor: var(--cursor-pointer, pointer);
 		backdrop-filter: blur(8px);
 		transition: background 0.2s;
 	}
-	.phase-day .btn {
-		background: rgba(0, 0, 0, 0.06);
-		color: rgba(40, 60, 40, 0.7);
-	}
-	.phase-dawn .btn {
-		background: rgba(100, 60, 20, 0.08);
-		color: rgba(100, 60, 30, 0.7);
-	}
 
 	.btn:hover {
-		background: rgba(255, 255, 255, 0.25);
-	}
-	.phase-day .btn:hover {
-		background: rgba(0, 0, 0, 0.1);
-	}
-	.phase-dawn .btn:hover {
-		background: rgba(100, 60, 20, 0.14);
+		background: var(--overlay-btn-hover);
 	}
 
 	.btn-ghost {
@@ -385,13 +363,7 @@
 	}
 
 	.btn-ghost:hover {
-		background: rgba(255, 255, 255, 0.1);
-	}
-	.phase-day .btn-ghost:hover {
-		background: rgba(0, 0, 0, 0.06);
-	}
-	.phase-dawn .btn-ghost:hover {
-		background: rgba(100, 60, 20, 0.08);
+		background: var(--overlay-btn-ghost-hover);
 	}
 
 	.empty-state {
@@ -406,14 +378,8 @@
 	.empty-state p {
 		font-size: 16px;
 		font-weight: 300;
-		color: rgba(255, 255, 255, 0.4);
+		color: var(--overlay-empty);
 		letter-spacing: 1px;
-	}
-	.phase-day .empty-state p {
-		color: rgba(40, 60, 40, 0.35);
-	}
-	.phase-dawn .empty-state p {
-		color: rgba(100, 60, 30, 0.4);
 	}
 
 	.welcome {
@@ -433,16 +399,8 @@
 		font-size: 28px;
 		font-weight: 400;
 		letter-spacing: 4px;
-		color: rgba(255, 255, 255, 0.85);
-		text-shadow: 0 0 30px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.4);
-	}
-	.welcome.phase-day p {
-		color: rgba(40, 60, 40, 0.65);
-		text-shadow: 0 1px 8px rgba(255, 255, 255, 0.5);
-	}
-	.welcome.phase-dawn p {
-		color: rgba(100, 60, 30, 0.7);
-		text-shadow: 0 1px 8px rgba(255, 245, 230, 0.4);
+		color: var(--overlay-welcome);
+		text-shadow: var(--overlay-welcome-shadow);
 	}
 
 	.month-picker {
@@ -455,23 +413,17 @@
 		gap: 12px;
 		padding: 8px 16px;
 		border-radius: 12px;
-		background: rgba(255, 255, 255, 0.1);
+		background: var(--overlay-month-bg);
 		backdrop-filter: blur(10px);
 		-webkit-backdrop-filter: blur(10px);
 		pointer-events: auto;
-	}
-	.phase-day .month-picker {
-		background: rgba(0, 0, 0, 0.05);
-	}
-	.phase-dawn .month-picker {
-		background: rgba(100, 60, 20, 0.08);
 	}
 
 	.month-label {
 		font-size: 14px;
 		font-weight: 300;
 		letter-spacing: 1px;
-		color: rgba(255, 255, 255, 0.8);
+		color: var(--overlay-month-text);
 		min-width: 140px;
 		text-align: center;
 		user-select: none;
@@ -485,12 +437,6 @@
 		left: 0;
 		right: 0;
 	}
-	.phase-day .month-label {
-		color: rgba(40, 60, 40, 0.65);
-	}
-	.phase-dawn .month-label {
-		color: rgba(100, 60, 30, 0.7);
-	}
 
 	.month-arrow {
 		display: flex;
@@ -500,31 +446,17 @@
 		border: none;
 		border-radius: 6px;
 		background: transparent;
-		color: rgba(255, 255, 255, 0.6);
+		color: var(--overlay-arrow);
 		cursor: var(--cursor-pointer, pointer);
 		transition: background 0.2s, color 0.2s;
 	}
 	.month-arrow:hover:not(:disabled) {
-		background: rgba(255, 255, 255, 0.15);
-		color: rgba(255, 255, 255, 0.9);
+		background: var(--overlay-arrow-hover-bg);
+		color: var(--overlay-arrow-hover);
 	}
 	.month-arrow:disabled {
 		opacity: 0.25;
 		cursor: default;
-	}
-	.phase-day .month-arrow {
-		color: rgba(40, 60, 40, 0.5);
-	}
-	.phase-day .month-arrow:hover:not(:disabled) {
-		background: rgba(0, 0, 0, 0.06);
-		color: rgba(40, 60, 40, 0.8);
-	}
-	.phase-dawn .month-arrow {
-		color: rgba(100, 60, 30, 0.5);
-	}
-	.phase-dawn .month-arrow:hover:not(:disabled) {
-		background: rgba(100, 60, 20, 0.1);
-		color: rgba(100, 60, 30, 0.8);
 	}
 
 	.editor-overlay {

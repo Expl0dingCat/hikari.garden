@@ -230,9 +230,9 @@
 	}
 
 	.latest-pin {
-		background: rgba(255, 200, 60, 0.25);
+		background: rgba(80, 60, 10, 0.55);
 		color: rgba(255, 220, 100, 0.95);
-		border: 1px solid rgba(255, 200, 60, 0.3);
+		border: 1px solid rgba(255, 200, 60, 0.35);
 	}
 
 	.flower-whisper {
