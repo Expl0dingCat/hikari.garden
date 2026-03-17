@@ -5,6 +5,7 @@
 	import { get } from 'svelte/store';
 	import type { JournalEntry } from '$lib/types.js';
 	import { generateHaiku } from '$lib/engine/HaikuGenerator.js';
+	import { env } from '$env/dynamic/public';
 	let canvas: HTMLCanvasElement;
 	let engine: GardenEngine;
 
@@ -37,6 +38,7 @@
 
 	onMount(() => {
 		engine = new GardenEngine();
+		engine.ownerTimezone = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
 		engine.init(canvas).then(() => {
 			engine.onFlowerClick = (entry: JournalEntry) => {
 				selectedFlower.set(entry);

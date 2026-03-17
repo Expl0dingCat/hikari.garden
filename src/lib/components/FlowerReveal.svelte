@@ -363,13 +363,22 @@
 		});
 	}
 
+	// Detect if visitor is in the same timezone as the owner
+	const visitorTz = typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : OWNER_TZ;
+	const isOwnerTz = visitorTz === OWNER_TZ;
+
+	/** Get today's date string in the owner's timezone */
+	function ownerToday(): string {
+		return new Date().toLocaleDateString('en-CA', { timeZone: OWNER_TZ });
+	}
+
 	function relativeDate(dateStr: string): string | null {
-		const today = new Date();
+		const todayStr = ownerToday();
+		if (dateStr === todayStr) return 'today';
+		// Compute days difference using parsed dates
 		const entryDate = new Date(dateStr + 'T00:00:00');
-		const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-		const diffMs = todayMidnight.getTime() - entryDate.getTime();
-		const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-		if (diffDays === 0) return 'today';
+		const todayDate = new Date(todayStr + 'T00:00:00');
+		const diffDays = Math.round((todayDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
 		if (diffDays === 1) return 'yesterday';
 		if (diffDays >= 2 && diffDays <= 7) return `${diffDays} days ago`;
 		return null;
@@ -380,9 +389,8 @@
 		const isFirst = all.length > 0 && all.reduce((oldest, e) => e.date < oldest.date ? e : oldest).id === entry?.id;
 		if (isFirst && all.length > 1) return 'the first flower in the garden';
 		const entryDate = new Date(dateStr + 'T00:00:00');
-		const now = new Date();
-		const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		const diffDays = Math.round((todayMidnight.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+		const todayDate = new Date(ownerToday() + 'T00:00:00');
+		const diffDays = Math.round((todayDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
 		if (diffDays <= 0) return 'planted today';
 		if (diffDays === 1) return 'planted yesterday';
 		if (diffDays < 30) return `${diffDays} days old`;
@@ -394,27 +402,33 @@
 		return `growing for ${years} year${years === 1 ? '' : 's'} and ${rem} month${rem === 1 ? '' : 's'}`;
 	}
 
+	/** Format time in owner's timezone. Appends TZ abbreviation (EST/EDT) for visitors. */
 	function formatTimeOwner(createdAt: number): string {
 		const t = new Date(createdAt);
-		return t.toLocaleTimeString('en-US', {
+		const time = t.toLocaleTimeString('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
 			hour12: true,
 			timeZone: OWNER_TZ
 		});
+		if (isOwnerTz) return time;
+		// Get timezone abbreviation (e.g. "EST" or "EDT")
+		const tzAbbr = new Intl.DateTimeFormat('en-US', { timeZone: OWNER_TZ, timeZoneName: 'short' })
+			.formatToParts(t)
+			.find((p) => p.type === 'timeZoneName')?.value || OWNER_TZ_LABEL;
+		return `${time} ${tzAbbr}`;
 	}
 
+	/** Format time in the visitor's local timezone (for hover tooltip). */
 	function formatTimeLocal(createdAt: number): string {
+		if (isOwnerTz) return '';
 		const t = new Date(createdAt);
-		const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-		if (localTz === OWNER_TZ) return '';
-		const localTime = t.toLocaleTimeString('en-US', {
+		return t.toLocaleTimeString('en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
-			hour12: true
+			hour12: true,
+			timeZoneName: 'short'
 		});
-		const shortTz = localTz.split('/').pop()?.replace(/_/g, ' ') || 'Local';
-		return `${localTime} ${shortTz}`;
 	}
 </script>
 
@@ -444,7 +458,7 @@
 					{#if relativeDate(entry.date)}
 						<span class="meta-tag">{relativeDate(entry.date)}</span>
 					{/if}
-					<span class="meta-tag time-tag" title={formatTimeLocal(entry.createdAt) || OWNER_TZ_LABEL}>{formatTimeOwner(entry.createdAt)}</span>
+					<span class="meta-tag time-tag" title={formatTimeLocal(entry.createdAt) || ''}>{formatTimeOwner(entry.createdAt)}</span>
 					{#if entry.weather}
 						<span class="meta-tag weather-tag">{@html getWeatherSvg(entry.weather.icon)} {entry.weather.temp}°C</span>
 					{/if}

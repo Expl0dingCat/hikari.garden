@@ -6,8 +6,11 @@
 	import SongPicker from './SongPicker.svelte';
 	import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 	import { hashString } from '$lib/generation/SeededRandom.js';
+	import { env } from '$env/dynamic/public';
 
 	import type { Weather } from '$lib/types.js';
+
+	const OWNER_TZ = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
 
 	type SubmitState = 'idle' | 'planting' | 'planted';
 
@@ -20,7 +23,8 @@
 
 	let title = $state('');
 	let text = $state('');
-	let date = $state(new Date().toISOString().split('T')[0]);
+	// Default to today in the owner's timezone (not visitor's local or UTC)
+	let date = $state(new Date().toLocaleDateString('en-CA', { timeZone: OWNER_TZ }));
 	let tagInput = $state('');
 	let tags = $state<string[]>([]);
 	let mood = $state<MoodVector>({

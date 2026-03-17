@@ -110,13 +110,13 @@
 		const all = $entries;
 		if (all.length === 0) return;
 		if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('hikari-otd-dismissed')) return;
-		const today = new Date();
-		const mm = String(today.getMonth() + 1).padStart(2, '0');
-		const dd = String(today.getDate()).padStart(2, '0');
-		const todaySuffix = `-${mm}-${dd}`;
+		const ownerTz = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
+		const ownerToday = new Date().toLocaleDateString('en-CA', { timeZone: ownerTz });
+		const todaySuffix = ownerToday.slice(4); // "-MM-DD"
+		const thisYear = ownerToday.slice(0, 4);
 		for (const e of all) {
-			if (e.date.endsWith(todaySuffix) && e.date.slice(0, 4) !== String(today.getFullYear())) {
-				const years = today.getFullYear() - parseInt(e.date.slice(0, 4));
+			if (e.date.endsWith(todaySuffix) && e.date.slice(0, 4) !== thisYear) {
+				const years = parseInt(thisYear) - parseInt(e.date.slice(0, 4));
 				if (years >= 1) {
 					onThisDay = { entry: e, yearsAgo: years };
 					break;

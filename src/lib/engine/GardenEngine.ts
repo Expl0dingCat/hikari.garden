@@ -41,6 +41,7 @@ export class GardenEngine {
 	private themeUpdateTimer = 0;
 	private todayFlowers: FlowerSprite[] = [];
 	private todayStr = '';
+	ownerTimezone = 'America/Toronto';
 	private latestFlower: FlowerSprite | null = null;
 	private growInActive = false;
 	private growInTimer = 0;
@@ -343,9 +344,8 @@ export class GardenEngine {
 			flower.forceTextureUpload(this.app.renderer);
 		}
 
-		// Cache today's flowers and latest flower (use local date, not UTC)
-		const now = new Date();
-		this.todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+		// Cache today's flowers and latest flower (use owner timezone)
+		this.todayStr = new Date().toLocaleDateString('en-CA', { timeZone: this.ownerTimezone });
 		this.todayFlowers = this.flowers.filter((f) => f.entry.date === this.todayStr);
 		this.latestFlower = this.flowers.length > 0 ? this.flowers[this.flowers.length - 1] : null;
 

@@ -2,6 +2,9 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cursorDefault, cursorPointer } from '$lib/stores/garden.js';
 	import { generateFlowerDNA } from '$lib/generation/FlowerDNA.js';
+	import { env } from '$env/dynamic/public';
+
+	const OWNER_TZ = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
 	import { renderFlower } from '$lib/generation/PixelArtRenderer.js';
 	import { selectedFlower, currentMonth } from '$lib/stores/garden.js';
 	import type { JournalEntry } from '$lib/types.js';
@@ -40,8 +43,7 @@
 		const dates = new Set(entries.map((e) => e.date));
 		const sortedDates = [...dates].sort();
 
-		const today = new Date();
-		const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+		const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: OWNER_TZ });
 
 		let currentStreak = 0;
 		let checkDate = new Date(todayStr + 'T00:00:00');
@@ -169,10 +171,7 @@
 
 	// Mood calendar heatmap
 	let showCalendar = $state(false);
-	const initMonth = (() => {
-		const now = new Date();
-		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-	})();
+	const initMonth = new Date().toLocaleDateString('en-CA', { timeZone: OWNER_TZ }).slice(0, 7);
 	let calendarMonth = $state(initMonth);
 
 	let calendarData = $derived.by(() => {
