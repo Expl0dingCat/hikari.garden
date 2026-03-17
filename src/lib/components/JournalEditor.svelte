@@ -326,6 +326,7 @@
 		overflow: visible;
 		box-shadow: var(--ui-shadow);
 		color: var(--ui-text);
+		box-sizing: border-box;
 	}
 
 	.top-bar {
@@ -722,11 +723,13 @@
 	@media (max-width: 700px) {
 		.editor {
 			padding: 12px 14px 16px;
-			max-height: 100vh;
+			width: 100%;
+			max-width: 100%;
+			min-width: 0;
+			height: calc(100dvh - 24px);
+			max-height: calc(100dvh - 24px);
 			overflow: hidden;
 			border-radius: 14px;
-			width: 100%;
-			min-width: 0;
 			display: flex;
 			flex-direction: column;
 		}
