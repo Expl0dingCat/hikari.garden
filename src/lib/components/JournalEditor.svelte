@@ -177,12 +177,11 @@
 </script>
 
 <div class="editor" style="cursor:{$cursorDefault};--cursor-pointer:{$cursorPointer}">
-	<div class="top-bar">
+	<div class="top-bar" class:mobile-hide={mobileStep === 1}>
 		<input
 			bind:value={title}
 			placeholder="title for today..."
 			class="title-input"
-			class:mobile-hide={mobileStep === 1}
 			maxlength={50}
 			disabled={locked}
 		/>
@@ -268,6 +267,7 @@
 				<div class="panel-flower-scroll">
 					<div class="preview-section">
 						<FlowerPreview {mood} {flowerSeed} />
+						<button class="preview-close-btn" onclick={oncancel} aria-label="Close">&times;</button>
 					</div>
 
 					<div class="mood-section">
@@ -449,7 +449,11 @@
 		padding: 10px 8px 6px;
 		background: var(--ui-bar-bg);
 		border-radius: 14px;
-		min-height: 240px;
+		position: relative;
+	}
+
+	.preview-close-btn {
+		display: none;
 	}
 
 	.mood-section {
@@ -777,6 +781,9 @@
 		.top-meta {
 			display: none;
 		}
+		.mobile-hide {
+			display: none;
+		}
 
 		.card-body {
 			flex: 1;
@@ -838,8 +845,27 @@
 			min-height: 240px;
 		}
 
-		.mobile-hide {
-			display: none;
+		.preview-close-btn {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			position: absolute;
+			top: 8px;
+			right: 8px;
+			width: 28px;
+			height: 28px;
+			border-radius: 50%;
+			border: none;
+			background: var(--ui-card, rgba(0,0,0,0.3));
+			color: var(--ui-text-muted);
+			font-size: 18px;
+			line-height: 1;
+			cursor: var(--cursor-pointer, pointer);
+			z-index: 2;
+			transition: color 0.2s, background 0.2s;
+		}
+		.preview-close-btn:hover {
+			color: var(--ui-text);
 		}
 
 		.desktop-actions {

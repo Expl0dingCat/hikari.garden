@@ -26,31 +26,28 @@
 		const h = rendered.height;
 		const px = rendered.pixels;
 
-		// Crop to non-transparent bounding box
-		let topY = 0;
-		let bottomY = h - 1;
+		// Find bounding box of non-transparent pixels
+		let minX = w, maxX = 0, minY = h, maxY = 0;
 		for (let y = 0; y < h; y++) {
-			let hasPixel = false;
 			for (let x = 0; x < w; x++) {
-				if (px[(y * w + x) * 4 + 3] > 0) { hasPixel = true; break; }
+				if (px[(y * w + x) * 4 + 3] > 0) {
+					if (x < minX) minX = x;
+					if (x > maxX) maxX = x;
+					if (y < minY) minY = y;
+					if (y > maxY) maxY = y;
+				}
 			}
-			if (hasPixel) { topY = y; break; }
 		}
-		for (let y = h - 1; y >= topY; y--) {
-			let hasPixel = false;
-			for (let x = 0; x < w; x++) {
-				if (px[(y * w + x) * 4 + 3] > 0) { hasPixel = true; break; }
-			}
-			if (hasPixel) { bottomY = y; break; }
-		}
+		const spriteW = maxX - minX + 1;
+		const spriteH = maxY - minY + 1;
 
-		topY = Math.max(0, topY - 1);
-		const croppedH = bottomY - topY + 2;
-
-		canvas.width = w * SCALE;
-		canvas.height = croppedH * SCALE;
+		// Use full canvas size, center the sprite
+		const side = Math.max(w, h);
+		canvas.width = side * SCALE;
+		canvas.height = side * SCALE;
 		const ctx = canvas.getContext('2d')!;
 		ctx.imageSmoothingEnabled = false;
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 		const tmpCanvas = document.createElement('canvas');
 		tmpCanvas.width = w;
@@ -61,11 +58,13 @@
 		const imageData = new ImageData(pixelData as unknown as Uint8ClampedArray<ArrayBuffer>, w, h);
 		tmpCtx.putImageData(imageData, 0, 0);
 
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		// Draw cropped sprite centered in square canvas
+		const dx = Math.round((side - spriteW) / 2) * SCALE;
+		const dy = Math.round((side - spriteH) / 2) * SCALE;
 		ctx.drawImage(
 			tmpCanvas,
-			0, topY, w, croppedH,
-			0, 0, canvas.width, canvas.height
+			minX, minY, spriteW, spriteH,
+			dx, dy, spriteW * SCALE, spriteH * SCALE
 		);
 	});
 </script>
