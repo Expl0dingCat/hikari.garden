@@ -1032,6 +1032,8 @@
 		overflow: hidden;
 		background: var(--ui-flower-bg, rgba(30, 25, 18, 0.45));
 		padding: 12px;
+		aspect-ratio: 1 / 1;
+		min-height: 0;
 	}
 
 	.flower-glow {
