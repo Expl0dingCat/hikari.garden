@@ -118,7 +118,7 @@
 
 	function addTag() {
 		const t = tagInput.trim();
-		if (t && !tags.includes(t)) {
+		if (t && !tags.includes(t) && tags.length < 3) {
 			tags = [...tags, t];
 			tagInput = '';
 		}
@@ -238,6 +238,29 @@
 						<span class="upload-hint">drop images here or click to browse</span>
 					{/if}
 				</div>
+
+				<div class="tag-area">
+					<div class="tags">
+						{#each tags as tag}
+							<button class="tag" onclick={() => !locked && removeTag(tag)} disabled={locked}>
+								{tag} &times;
+							</button>
+						{/each}
+					</div>
+					{#if !locked && tags.length < 3}
+						<div class="tag-input-wrap">
+							<input
+								bind:value={tagInput}
+								placeholder="add a tag..."
+								class="tag-input"
+								onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+							/>
+							{#if tagInput.trim()}
+								<button class="tag-add-btn" onclick={addTag} type="button" aria-label="Add tag">+</button>
+							{/if}
+						</div>
+					{/if}
+				</div>
 			</div>
 
 		<!-- Panel 2: Flower & Details -->
@@ -252,29 +275,6 @@
 					</div>
 
 					<SongPicker value={song} onchange={(s) => (song = s)} disabled={locked} />
-
-					<div class="tag-area">
-						<div class="tags">
-							{#each tags as tag}
-								<button class="tag" onclick={() => !locked && removeTag(tag)} disabled={locked}>
-									{tag} &times;
-								</button>
-							{/each}
-						</div>
-						{#if !locked}
-							<div class="tag-input-wrap">
-								<input
-									bind:value={tagInput}
-									placeholder="add a tag..."
-									class="tag-input"
-									onkeydown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-								/>
-								{#if tagInput.trim()}
-									<button class="tag-add-btn" onclick={addTag} type="button" aria-label="Add tag">+</button>
-								{/if}
-							</div>
-						{/if}
-					</div>
 				</div>
 			</div>
 		</div>
@@ -489,6 +489,7 @@
 		align-items: center;
 		overflow-x: auto;
 		scrollbar-width: none;
+		flex-shrink: 0;
 	}
 	.tag-area::-webkit-scrollbar {
 		display: none;

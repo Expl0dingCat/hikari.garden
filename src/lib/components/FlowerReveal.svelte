@@ -8,6 +8,7 @@
 	import { env } from '$env/dynamic/public';
 
 	const OWNER_TZ = env.PUBLIC_OWNER_TIMEZONE || 'America/Toronto';
+
 	const OWNER_TZ_LABEL = env.PUBLIC_OWNER_TIMEZONE_LABEL || 'Toronto';
 
 	let visible = $derived($selectedFlower !== null);
@@ -640,6 +641,7 @@
 				</div>
 
 				<div class="panel panel-text-view" style="height: {textSideHeight}">
+				<div class="text-inner">
 					{#if entry.title}
 						<h2 class="entry-title">{entry.title}</h2>
 					{/if}
@@ -649,12 +651,15 @@
 							{#each entry.images.slice(0, 2) as img, i}
 								<!-- svelte-ignore a11y_click_events_have_key_events -->
 								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+								<div class="img-wrap">
 								<img
 									src="/api/images/{img}"
 									alt=""
 									class="strip-img"
+									onload={(e) => { (e.currentTarget as HTMLElement).parentElement!.classList.add('img-loaded'); }}
 									onclick={(e) => { e.stopPropagation(); lightboxIndex = i; lightboxOpen = true; }}
 								/>
+							</div>
 							{/each}
 							{#if entry.images.length > 2}
 								<button class="more-images" onclick={(e) => { e.stopPropagation(); lightboxIndex = 0; lightboxOpen = true; }}>
@@ -670,32 +675,33 @@
 						</div>
 					{/if}
 
-					{#if showTags && entry.tags && entry.tags.length > 0}
-						<div class="tags" transition:fade={{ duration: 400 }}>
-							{#each entry.tags as tag}
-								<span class="tag">{tag}</span>
-							{/each}
+					<div class="bottom-row" transition:fade={{ duration: 400 }}>
+						{#if showTags && entry.tags && entry.tags.length > 0}
+							<div class="tags">
+								{#each entry.tags as tag}
+									<span class="tag">{tag}</span>
+								{/each}
+							</div>
+						{/if}
+						<div class="action-btns">
+							<button class="share-btn" onclick={handleCopyLink} aria-label="Share">
+								{#if linkCopied}
+									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+									<span class="btn-label">copied</span>
+								{:else}
+									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+									<span class="btn-label btn-label-secondary">share</span>
+								{/if}
+							</button>
+							<button class="share-btn" onclick={exportFlowerCard} aria-label="Save">
+								<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+								<span class="btn-label">save</span>
+							</button>
 						</div>
-					{/if}
+					</div>
 				</div>
 				</div>
-			</div>
-
-			<!-- Desktop footer -->
-			<div class="card-footer desktop-footer">
-				<button class="share-btn" onclick={handleCopyLink}>
-					{#if linkCopied}
-						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-						copied
-					{:else}
-						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-						share flower
-					{/if}
-				</button>
-				<button class="share-btn" onclick={exportFlowerCard}>
-					<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-					save flower
-				</button>
+				</div>
 			</div>
 
 			<!-- Mobile footer with step navigation -->
@@ -718,22 +724,6 @@
 							flower
 							<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
 						</button>
-					{:else}
-						<div class="footer-actions" transition:fade={{ duration: 200 }}>
-							<button class="share-btn" onclick={handleCopyLink}>
-								{#if linkCopied}
-									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-									copied
-								{:else}
-									<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-									share
-								{/if}
-							</button>
-							<button class="share-btn" onclick={exportFlowerCard}>
-								<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-								save
-							</button>
-						</div>
 					{/if}
 				</div>
 			</div>
@@ -927,17 +917,35 @@
 			width: 100% !important;
 			min-width: 100% !important;
 			flex: none !important;
+			height: 100%;
 			align-items: center;
 			order: 1;
+			overflow-y: auto !important;
+			scrollbar-width: none;
+		}
+		.panel-flower-view::-webkit-scrollbar {
+			display: none;
 		}
 		.panel-text-view {
 			width: 100% !important;
 			min-width: 100% !important;
 			flex: none !important;
-			height: auto !important;
+			height: 100% !important;
 			order: 0;
+			display: block !important;
 			overflow-y: auto !important;
 			scrollbar-width: none;
+		}
+		.text-inner {
+			min-height: 100%;
+			display: flex;
+			flex-direction: column;
+		}
+		.bottom-row {
+			margin-top: auto;
+		}
+		.btn-label {
+			display: none;
 		}
 		.panel-text-view::-webkit-scrollbar {
 			display: none;
@@ -950,11 +958,17 @@
 			font-size: 16px;
 			margin-bottom: 8px;
 		}
+		.mood-bars {
+			width: 100%;
+			align-self: stretch;
+			padding: 0 4px;
+			box-sizing: border-box;
+		}
 		.mood-track {
-			min-width: 80px;
+			min-width: 0;
 		}
 		.mood-label {
-			width: 60px;
+			width: 50px;
 			font-size: 9px;
 		}
 		.entry-title {
@@ -974,9 +988,6 @@
 			text-overflow: ellipsis;
 		}
 		.top-meta {
-			display: none;
-		}
-		.desktop-footer {
 			display: none;
 		}
 		.mobile-footer {
@@ -1245,6 +1256,7 @@
 		border-radius: 2px;
 		background: var(--ui-bar-bg);
 		overflow: hidden;
+		min-width: 120px;
 	}
 
 	.mood-fill {
@@ -1259,6 +1271,30 @@
 		flex-direction: column;
 		min-width: 0;
 		overflow: hidden;
+	}
+
+	.text-inner {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.bottom-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		margin-top: auto;
+		padding-top: 12px;
+		border-top: 1px solid var(--ui-divider);
+		flex-shrink: 0;
+	}
+
+	.action-btns {
+		display: flex;
+		gap: 6px;
+		margin-left: auto;
 	}
 
 	.entry-title {
@@ -1358,16 +1394,44 @@
 		align-items: center;
 	}
 
-	.strip-img {
+	.img-wrap {
 		height: 80px;
+		border-radius: 8px;
+		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		overflow: hidden;
+		position: relative;
+	}
+	.img-wrap::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+		animation: shimmer 1.5s ease infinite;
+		pointer-events: none;
+	}
+	@keyframes shimmer {
+		0% { transform: translateX(-100%); }
+		100% { transform: translateX(100%); }
+	}
+	.img-wrap:only-of-type {
+		height: 180px;
+	}
+	.img-wrap.img-loaded {
+		background: none;
+	}
+	.img-wrap.img-loaded::after {
+		display: none;
+	}
+
+	.strip-img {
+		height: 100%;
+		width: auto;
 		border-radius: 8px;
 		object-fit: cover;
 		cursor: var(--cursor-pointer, pointer);
-		transition: opacity 0.2s;
-	}
-	.strip-img:only-child {
-		height: 180px;
-		max-width: 100%;
+		display: block;
+		position: relative;
+		z-index: 1;
 	}
 	.strip-img:hover {
 		opacity: 0.8;
@@ -1449,10 +1513,6 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 6px;
-		margin-top: auto;
-		padding-top: 12px;
-		border-top: 1px solid var(--ui-divider);
-		flex-shrink: 0;
 	}
 
 	.tag {
@@ -1466,6 +1526,8 @@
 
 	.song-section {
 		margin-top: 14px;
+		max-width: 100%;
+		overflow: hidden;
 	}
 
 	.song-heading {
@@ -1484,6 +1546,8 @@
 		padding: 8px 10px;
 		border-radius: 10px;
 		background: var(--ui-bar-bg, rgba(255,255,255,0.08));
+		max-width: 100%;
+		box-sizing: border-box;
 	}
 
 	.song-art {
