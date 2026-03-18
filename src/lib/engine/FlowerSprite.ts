@@ -81,10 +81,7 @@ export class FlowerSprite {
 		this.sprite.scale.set(PIXEL_SCALE);
 		this.sprite.anchor.set(0.5, 1);
 
-		this.hitWidth = base.width * PIXEL_SCALE * 0.5;
-		this.hitHeight = base.height * PIXEL_SCALE * 0.6;
-
-		// Find actual top of visible pixels for accurate label placement
+		// Find actual top of visible pixels for accurate label placement & hitbox
 		let topPixelY = 0;
 		const px = base.pixels;
 		const w = base.width;
@@ -98,6 +95,9 @@ export class FlowerSprite {
 		}
 		// Height from bottom (anchor) to top visible pixel
 		this.flowerHeight = (h - topPixelY) * PIXEL_SCALE;
+
+		this.hitWidth = base.width * PIXEL_SCALE * 0.5;
+		this.hitHeight = this.flowerHeight * 0.8;
 
 		// Sparkle particles for hover indication
 		this.sparkleGfx = new Graphics();
@@ -142,9 +142,11 @@ export class FlowerSprite {
 
 	hitTest(wx: number, wy: number): boolean {
 		const left = this.worldX - this.hitWidth / 2;
-		const spriteFullHeight = this.sprite.height;
-		const top = this.worldY - spriteFullHeight + (spriteFullHeight - this.hitHeight) * 0.2;
-		return wx >= left && wx <= left + this.hitWidth && wy >= top && wy <= top + this.hitHeight;
+		// Anchor hitbox to actual visible flower, not the full sprite canvas
+		const top = this.worldY - this.flowerHeight;
+		const bottom = this.worldY;
+		const hitTop = top + (this.flowerHeight - this.hitHeight) * 0.15;
+		return wx >= left && wx <= left + this.hitWidth && wy >= hitTop && wy <= bottom;
 	}
 
 	setHover(hovered: boolean) {
