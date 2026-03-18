@@ -640,7 +640,7 @@
 					{/if}
 				</div>
 
-				<div class="panel panel-text-view" style="height: {textSideHeight}">
+				<div class="panel panel-text-view" style="max-height: {textSideHeight}">
 				<div class="text-inner">
 					{#if entry.title}
 						<h2 class="entry-title">{entry.title}</h2>
@@ -1270,7 +1270,13 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
-		overflow: hidden;
+		overflow-y: auto;
+		overflow-x: hidden;
+		scrollbar-width: none;
+		min-height: 420px;
+	}
+	.panel-text-view::-webkit-scrollbar {
+		display: none;
 	}
 
 	.text-inner {
