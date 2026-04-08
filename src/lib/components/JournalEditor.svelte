@@ -463,7 +463,7 @@
 
 	.journal-textarea {
 		font-family: 'Mona Sans', sans-serif;
-		font-size: 14px;
+		font-size: 15px;
 		line-height: 1.8;
 		padding: 14px 16px;
 		border: 1px solid var(--ui-input-border);
