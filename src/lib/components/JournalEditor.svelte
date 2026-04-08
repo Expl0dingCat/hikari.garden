@@ -462,7 +462,7 @@
 	}
 
 	.journal-textarea {
-		font-family: inherit;
+		font-family: 'Mona Sans', sans-serif;
 		font-size: 14px;
 		line-height: 1.8;
 		padding: 14px 16px;

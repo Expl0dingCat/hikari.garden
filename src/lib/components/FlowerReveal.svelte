@@ -1317,7 +1317,7 @@
 	}
 
 	.journal-text {
-		font-family: inherit;
+		font-family: 'Mona Sans', sans-serif;
 		font-size: 16px;
 		line-height: 1.65;
 		color: var(--ui-text-soft);
