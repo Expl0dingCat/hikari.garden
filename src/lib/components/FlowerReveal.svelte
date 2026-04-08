@@ -1276,6 +1276,20 @@
 		overflow-x: hidden;
 		scrollbar-width: none;
 		min-height: 420px;
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent 0%,
+			black 16px,
+			black calc(100% - 24px),
+			transparent 100%
+		);
+		mask-image: linear-gradient(
+			to bottom,
+			transparent 0%,
+			black 16px,
+			black calc(100% - 24px),
+			transparent 100%
+		);
 	}
 	.panel-text-view::-webkit-scrollbar {
 		display: none;
