@@ -1321,28 +1321,8 @@
 		font-size: 15px;
 		line-height: 1.65;
 		color: var(--ui-text-soft);
-		flex: 1;
-		overflow-y: auto;
 		overflow-wrap: break-word;
 		padding: 4px 0 16px;
-		scrollbar-width: none;
-		-webkit-mask-image: linear-gradient(
-			to bottom,
-			transparent 0%,
-			black 12px,
-			black calc(100% - 24px),
-			transparent 100%
-		);
-		mask-image: linear-gradient(
-			to bottom,
-			transparent 0%,
-			black 12px,
-			black calc(100% - 24px),
-			transparent 100%
-		);
-	}
-	.journal-text::-webkit-scrollbar {
-		display: none;
 	}
 
 	.journal-text :global(p) {
