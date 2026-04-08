@@ -674,6 +674,7 @@
 							{@html renderedHtml}
 						</div>
 					{/if}
+					</div>
 
 					<div class="bottom-row" transition:fade={{ duration: 400 }}>
 						{#if showTags && entry.tags && entry.tags.length > 0}
@@ -699,7 +700,6 @@
 							</button>
 						</div>
 					</div>
-				</div>
 				</div>
 				</div>
 			</div>
@@ -1272,10 +1272,18 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 420px;
+		overflow: hidden;
+	}
+
+	.text-inner {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
 		overflow-y: auto;
 		overflow-x: hidden;
 		scrollbar-width: none;
-		min-height: 420px;
 		-webkit-mask-image: linear-gradient(
 			to bottom,
 			transparent 0%,
@@ -1291,15 +1299,8 @@
 			transparent 100%
 		);
 	}
-	.panel-text-view::-webkit-scrollbar {
+	.text-inner::-webkit-scrollbar {
 		display: none;
-	}
-
-	.text-inner {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-height: 0;
 	}
 
 	.bottom-row {
